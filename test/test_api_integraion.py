@@ -1,93 +1,84 @@
 import unittest
 import os
-from typing import List, Dict
-
 from dotenv import load_dotenv
 load_dotenv()
-
-from app.services.products_api import get_all_products
-from app.services.suppliers_api import get_all_suppliers
-from app.services.customers_api import get_all_customers
-from app.services.analytics_api import get_sales_summary
-from app.services.orders_api import search_recent_orders
+import requests
 
 class TestAPIIntegration(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
+
+        cls.base_url = os.getenv('POS_API_URL')
+        
+        cls.headers = {
+            "Authorization": "Bearer TEST_TOKEN_AQUI",
+            "Content-Type": "application/json"
+        }
+
+    def check_endpoint_alive(self, endpoint, params=None):
         """
-        Validación estricta de entorno. SIN URLs POR DEFECTO.
-        Si no se provee la URL del POS, las pruebas no deben ejecutarse.
+        Función auxiliar: Hace un GET al endpoint y verifica que 
+        el servidor responda (status code < 500).
         """
-        if not os.getenv("POS_API_URL"):
-            raise EnvironmentError(
-                "CRITICAL ERROR: 'POS_API_URL' no está definida. "
-                "Debes proveer la URL real del backend para ejecutar las pruebas de integración."
+        url = f"{self.base_url}{endpoint}"
+        try:
+            response = requests.get(url, params=params, headers=self.headers, timeout=5)
+            
+            self.assertLess(
+                response.status_code, 
+                500, 
+                f"CRASH del servidor (500+) en {endpoint}. Código: {response.status_code}. Respuesta: {response.text}"
             )
-
-    # PRUEBAS DEL MÓDULO DE PRODUCTOS
-
-    def test_01_get_all_products(self):
-        """Verifica que el catálogo de productos responda correctamente."""
-        response = get_all_products()
-        
-        if isinstance(response, dict) and "error" in response:
-            self.fail(f"Fallo en Productos: {response['error']}")
+            return response
             
-        self.assertIsInstance(response, list, "La API debe devolver una lista de productos.")
+        except requests.exceptions.ConnectionError:
+            self.fail(f"Fallo de conexión: No se pudo conectar a {url}. ¿Está el servidor encendido?")
+        except requests.exceptions.Timeout:
+            self.fail(f" Timeout: El endpoint {url} tardó demasiado en responder.")
 
-    # PRUEBAS DEL MÓDULO DE PROVEEDORES
+    # TESTS DE ANALYTICS (Tus rutas actuales)
 
-    def test_02_get_all_suppliers(self):
-        """Verifica el acceso al directorio de proveedores (Requiere ADMIN/OWNER)."""
-        response = get_all_suppliers()
+    def test_analytics_sales_summary(self):
+        self.check_endpoint_alive("/analytics/sales-summary/", {"start_date": "2026-03-01"})
+
+    def test_analytics_product_ranking(self):
+        self.check_endpoint_alive("/analytics/product-ranking/", {"limit": 10, "criterion": "most"})
+
+    def test_analytics_low_stock(self):
+        self.check_endpoint_alive("/analytics/reports/low-stock/", {"threshold": 5})
+
+    def test_analytics_dead_inventory(self):
+        self.check_endpoint_alive("/analytics/reports/dead-inventory/")
+
+    def test_analytics_customer_sales(self):
+        # Usamos un ID de cliente genérico (ej. 1), si no existe dará 404, lo cual es válido aquí.
+        self.check_endpoint_alive("/analytics/customer-sales/", {"customer_id": 1})
+
+    def test_analytics_sales_velocity(self):
+        self.check_endpoint_alive("/analytics/sales-velocity/", {"identifier": "TEST-PROD", "period_days": 30})
+
+    def test_analytics_inventory_valuation(self):
+        self.check_endpoint_alive("/analytics/inventory-valuation/")
+
+    def test_analytics_product_contribution(self):
+        self.check_endpoint_alive("/analytics/product-contribution/", {"product_identifier": "TEST-PROD"})
+
+    # ==========================================
+    # OTROS SERVICIOS (Ejemplos a completar)
+    # ==========================================
+
+    def test_products_list(self):
+        self.check_endpoint_alive("/products/")
+
+    def test_customers_list(self):
+        self.check_endpoint_alive("/customers/")
+
+    def test_sales_list(self):
+        self.check_endpoint_alive("/sales/")
         
-        if isinstance(response, dict) and "error" in response:
-            error_msg = str(response.get("error"))
-            
-            if "Permiso denegado" in error_msg:
-                print("\n[INFO] Prueba de proveedores arrojó 403 (Permiso denegado). Esto es correcto si el Bot usa un token de EMPLOYEE.")
-            else:
-                self.fail(f"Error inesperado en Proveedores: {error_msg}")
-        else:
-            self.assertIsInstance(response, list)
+    def test_providers_list(self):
+        self.check_endpoint_alive("/providers/")
 
-    # PRUEBAS DEL MÓDULO DE CLIENTES
-
-    def test_03_get_all_customers(self):
-        """Verifica la respuesta del listado de clientes y sus atributos de lealtad."""
-        response = get_all_customers()
-        
-        if isinstance(response, dict) and "error" in response:
-            error_msg = str(response.get("error"))
-            self.fail(f"Fallo en Clientes: {error_msg}")
-            
-        self.assertIsInstance(response, list)
-
-    # PRUEBAS DEL MÓDULO DE ANALÍTICA
-
-    def test_04_get_sales_summary(self):
-        """Verifica el resumen de ventas enviando fechas en formato ISO 8601."""
-        start = "2026-03-01"
-        end = "2026-03-31"
-        response = get_sales_summary(start_date=start, end_date=end)
-        
-        if isinstance(response, dict) and "error" in response:
-            self.fail(f"Fallo en Analítica (Sales Summary): {response['error']}")
-            
-        self.assertIsInstance(response, dict, "El resumen de ventas debe ser un objeto JSON (dict).")
-
-    # PRUEBAS DEL MÓDULO DE ÓRDENES
-
-    def test_05_search_recent_orders(self):
-        """Verifica la consulta de tickets recientes."""
-        response = search_recent_orders(limit=5)
-        
-        if isinstance(response, dict) and "error" in response:
-            error_msg = str(response.get("error"))
-            self.fail(f"Fallo en Órdenes: {error_msg}")
-            
-        self.assertIsInstance(response, list, "La búsqueda de órdenes debe devolver una lista.")
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

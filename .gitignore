@@ -11,3 +11,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .coverage
+
+#Base de datos
+pos_agent.db
