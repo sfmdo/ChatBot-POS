@@ -1,4 +1,3 @@
-# app/services/customers_api.py
 from typing import List, Dict, Any, Optional, Union
 from app.services.api_client import get_http_client
 import logging

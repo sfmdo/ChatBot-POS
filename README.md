@@ -1,62 +1,157 @@
+This is the updated and translated version of your documentation, incorporating the new project structure, the **Time Translator** logic, and the **POS Service Catalog** for the MCP (Model Context Protocol).
+
+***
+
 # POS Agent - Telegram Bot
 
-Este proyecto consiste en un bot de Telegram diseñado para interactuar con los datos de un sistema de Punto de Venta (https://github.com/Omescobell/Punto-de-Venta). Funciona como un asistente virtual que autentica a los empleados autorizados mediante un sistema de lista blanca y mantiene un registro de la conversación, aislando el contexto por cada usuario de manera segura.
+This project is an intelligent Telegram bot assistant designed to interface with a Point of Sale (POS) system ([GitHub Repository](https://github.com/Omescobell/Punto-de-Venta)). It acts as a virtual bridge, allowing authorized employees to query sales, inventory, and customer data using natural language processed by a local LLM (Ollama).
 
-Actualmente, el sistema gestiona la capa de **Autenticación (Lista Blanca)** y la **Memoria de Contexto**. La integración con el modelo de lenguaje de IA (Ollama) representa la siguiente fase del desarrollo.
+## Key Features
 
-## Características Principales
+*   **Native Authentication (Whitelist):** No passwords required. The bot validates the user's Telegram contact against the POS authorized phone list.
+*   **Session Management:** Local SQLite persistence creates 24-hour sessions to minimize external API calls.
+*   **Context Isolation:** Conversation history is strictly bound to the `telegram_id`, ensuring data privacy between different employees.
+*   **MCP Integration (Model Context Protocol):** Uses a modular architecture to expose POS tools and resources to the LLM.
+*   **Automated Time Translation:** A dedicated logic layer prevents the LLM from hallucinating dates, translating business terms (e.g., "last month") into structured API parameters.
+*   **Integrated Testing:** Includes smoke tests for API integration, database integrity, and time translation logic.
 
-*   **Autenticación por Teléfono (Lista Blanca):** El bot omite el uso de contraseñas tradicionales, utilizando la validación nativa de contactos de Telegram y contrastándola directamente contra la API del POS.
+---
 
-*   **Gestión de Sesiones (24 Horas):** Para optimizar el rendimiento y evitar la saturación de la API externa, el bot genera una sesión local en SQLite con una vigencia de 24 horas.
+## Project Structure
 
-*   **Aislamiento de Contexto:** Cada interacción se almacena y se vincula exclusivamente a la `telegram_id` del usuario. Esto garantiza la privacidad de los datos y previene la mezcla de contextos entre diferentes empleados al procesar respuestas con la IA.
-
-*   **Smoke Testing Integrado:** Incorpora pruebas unitarias diseñadas para validar la disponibilidad y el correcto funcionamiento de los endpoints de la API del POS previos a la ejecución en producción.
-
-## Arquitectura y Flujo de Operación
-
-El sistema opera bajo dos flujos de ejecución principales:
-**1. Flujo de Autenticación (`/start`)**
-
-*   1. El usuario inicializa la conversación mediante el comando `/start`.
-
-*   2. El bot despliega un teclado nativo solicitando compartir el contacto (`request_contact=True)`.
-
-*   3. Al recibir el objeto de contacto, el sistema invoca la función `obtener_telefonos_autorizados()` hacia la API del POS.
-
-*   4. Si el número de teléfono existe en la lista de autorización, se registra una sesión en la base de datos local (`pos_agent.db`) otorgando acceso por un periodo de 24 horas.
-
-**2. Flujo de Mensajería y Validación (Middleware)**
-
-*   1. El usuario envía un mensaje de texto.
-
-*   2. El middleware intercepta la petición y verifica en la base de datos local si la `telegram_id` posee una sesión activa.
-
-*   3. Acceso denegado: Se detiene la ejecución y se instruye al usuario a renovar su sesión mediante /start.
-
-*   4. Acceso concedido: Se registra el mensaje en la tabla `mensajes`, se recupera el historial reciente de dicho usuario para construir el contexto, y se prepara el payload para su envío al motor de IA.
-
-## Estructura del Proyecto
-```Plaintext
-├── app/
-│   ├── bot/
-│   │   └── handlers.py       # Controladores de Telegram (comandos, contactos y texto)
-│   ├── models/
-│   │   └── database.py       # Lógica de persistencia en SQLite local (Sesiones y Contexto)
-│   └── services/
-│       └── api_client.py     # Cliente HTTP para la API del POS
-├── tests/
-│   └── test_api.py           # Pruebas de humo (Smoke tests) para los endpoints externos
-├── pos_agent.db              # Base de datos local SQLite (generada automáticamente)
-├── main.py                   # Punto de entrada para la ejecución del bot
-└── README.md
+```bash
+├── app
+│   ├── bot
+│   │   ├── client.py         # Telegram Client setup
+│   │   └── handlers.py       # Command and message controllers
+│   ├── mcp                   # Model Context Protocol layer
+│   │   ├── mcp_resources.py  # Static/Dynamic resources for the LLM
+│   │   ├── mcp_server.py     # MCP Server implementation
+│   │   ├── mcp_tools.py      # Tool definitions for the LLM
+│   │   └── resources         # Documentation for LLM prompting
+│   ├── models
+│   │   └── database.py       # SQLite persistence (English schema)
+│   ├── rag                   # Future RAG implementation
+│   ├── services              # POS API Clients
+│   │   ├── analytics_api.py
+│   │   ├── api_client.py     # Base HTTP Client
+│   │   ├── chatbot_users_api.py
+│   │   ├── customers_api.py
+│   │   ├── ia_service.py     # Ollama/LLM interface
+│   │   ├── orders_api.py
+│   │   ├── products_api.py
+│   │   └── suppliers_api.py
+│   └── utils
+│       └── time_translator.py # Date logic handler
+├── ia_config
+│   └── Modelfile             # Ollama configuration
+├── main.py                   # Entry point
+├── test                      # Test Suite
+│   ├── test_api_integraion.py
+│   ├── test_bd.py
+│   ├── test_qwen.py
+│   └── test_time_translator.py
+└── pyproject.toml
 ```
 
-## Esquema de Base de Datos Local (`pos_agent.db`)
+## 🗄 Local Database Schema (`pos_agent.db`)
 
-La base de datos SQLite gestiona la persistencia de sesiones y el historial conversacional:
+*   **`users` Table:** Manages sessions.
+    *   `telegram_id` (PK), `phone`, `expires_at`.
+*   **`messages` Table:** Isolated conversation logs.
+    *   `telegram_id` (FK), `role` ("user"/"assistant"), `content`, `created_at`.
 
-*   **Tabla `usuarios`:** Almacena los identificadores de sesión. Campos principales: `telegram_id`(Primary Key), `telefono`, y `expira_el` (Timestamp de caducidad).
+I have updated the README to include a **Configuration** section with the environment variables from your image, along with a brief explanation of how to set them up.
 
-*   **Tabla `mensajes`:** Almacena el historial conversacional aislado. Campos principales: `telegram_id` (Foreign Key), `rol` ("user" o "assistant"), `contenido`, y `fecha`.
+***
+
+# POS Agent - Telegram Bot
+
+This project is an intelligent Telegram bot assistant designed to interface with a Point of Sale (POS) system ([GitHub Repository](https://github.com/Omescobell/Punto-de-Venta)). It acts as a virtual bridge, allowing authorized employees to query sales, inventory, and customer data using natural language processed by a local LLM (Ollama).
+
+## 🚀 Key Features
+
+*   **Native Authentication (Whitelist):** No passwords required. The bot validates the user's Telegram contact against the POS authorized phone list.
+*   **Session Management:** Local SQLite persistence creates 24-hour sessions to minimize external API calls.
+*   **Context Isolation:** Conversation history is strictly bound to the `telegram_id`, ensuring data privacy.
+*   **MCP Integration:** Modular architecture exposing POS tools and resources to the LLM.
+*   **Automated Time Translation:** Logic layer to translate business terms (e.g., "last month") into structured API parameters.
+
+---
+
+## ⚙️ Configuration
+
+To run this project, you need to create a `.env` file in the root directory and populate it with the following variables:
+
+```env
+# Telegram Bot Token (from @BotFather)
+TELEGRAM_TOKEN=your_telegram_bot_token_here
+
+# POS API Credentials (for backend authentication)
+BOT_API_EMAIL=your_email@example.com
+BOT_API_PASSWORD=your_secure_password
+
+# External API URLs
+POS_API_URL=http://your-pos-api-url.com
+OLLAMA_BASE_URL=http://localhost:11434
+
+# AI Model Configuration
+OLLAMA_MODEL=pepe_model_name
+```
+
+### Setup Instructions:
+1.  **Telegram:** Obtain your token from BotFather.
+2.  **POS API:** Ensure the `BOT_API_EMAIL` is registered in your POS system with the necessary permissions.
+3.  **Ollama:** Ensure the Ollama service is running and the model specified in `OLLAMA_MODEL` is pulled (`ollama pull <model_name>`).
+
+---
+
+## Time Translator Module
+
+**Purpose:** The AI Agent must **NEVER** calculate dates (YYYY-MM-DD) manually. To avoid errors, the Agent delegates calculations to the internal engine using these predefined parameters:
+
+### Mode 1: Absolute Periods (Business Terms)
+If the user mentions fixed timeframes, the Agent sends the `period` parameter with these exact strings:
+- `hoy` (today) / `ayer` (yesterday)
+- `esta_semana` (this week) / `semana_pasada` (last week)
+- `este_mes` (this month) / `mes_pasado` (last month)
+- `q1, q2, q3, q4` (Current year quarters)
+- `s1, s2` (Current year semesters)
+- `este_año` (this year) / `año_pasado` (last year)
+
+### Mode 2: Relative Periods (Retroactive)
+If the user asks for "look-back" info (e.g., "last 3 months"), the Agent sends:
+- **`unit` (String):** `dia`, `semana`, `mes`, `bimestre`, `trimestre`, `semestre`, or `año`.
+- **`quantity` (Integer):** The number of units to go back.
+
+---
+
+## POS Service Catalog (MCP Tools)
+
+The LLM uses these tools to interact with the POS system:
+
+### 1. Analytics Module (`analytics_api`)
+*   `get_sales_summary(start_date, end_date)`: Financial performance, average ticket, and peak hours.
+*   `get_product_ranking(limit, criterion, start_date, end_date)`: Top/Bottom selling products (`criterion`: "most", "least", "both").
+*   `get_low_stock(threshold)`: Products at or below the inventory threshold.
+*   `get_dead_inventory(reference_date)`: Stocked items with no sales since the reference date.
+*   `get_sales_velocity(identifier, period_days)`: Daily sales rate and estimated "days until out of stock."
+*   `get_inventory_valuation(product_identifier)`: Total cost, potential revenue, and profit margin.
+
+### 2. Orders & Tickets (`orders_api`)
+*   `get_order_detail(order_id)`: Itemized breakdown, taxes (VAT), and discounts for a specific transaction.
+*   `search_recent_orders(ticket_folio, status, limit)`: Search by folio or status (PENDING, PAID, CANCELLED).
+
+### 3. Chatbot Users (`chatbot_users_api`)
+*   `get_all_chatbot_users()`: List of all authorized names and phone numbers.
+*   `get_chatbot_user(mobile_number)`: Access verification and last interaction timestamp.
+
+### 4. Products & Promotions (`products_api`)
+*   `get_all_products()`: Complete catalog including SKU, price, and "available to sell" stock.
+*   `get_all_promotions()`: List active discounts (e.g., Black Friday) and validity dates.
+*   `get_promotions_by_product(product_id)`: Check specific discounts for a single item.
+
+### 5. Customers & Loyalty (`customers_api`)
+*   `get_all_customers()`: List of customers, "Frequent Flyer" status, and loyalty points.
+*   `get_customer_points_history(customer_id)`: Audit log of EARN and REDEEM point events.
+*   `get_customer_credit_history(customer_id)`: Store credit ledger (CHARGE and PAYMENT events).

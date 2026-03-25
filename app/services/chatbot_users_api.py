@@ -1,4 +1,3 @@
-# app/services/chatbot_users_api.py
 from app.services.api_client import get_http_client
 from urllib.parse import quote
 import logging
