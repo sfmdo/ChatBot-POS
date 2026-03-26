@@ -57,22 +57,6 @@ This project is an intelligent Telegram bot assistant designed to interface with
 *   **`messages` Table:** Isolated conversation logs.
     *   `telegram_id` (FK), `role` ("user"/"assistant"), `content`, `created_at`.
 
-I have updated the README to include a **Configuration** section with the environment variables from your image, along with a brief explanation of how to set them up.
-
-***
-
-# POS Agent - Telegram Bot
-
-This project is an intelligent Telegram bot assistant designed to interface with a Point of Sale (POS) system ([GitHub Repository](https://github.com/Omescobell/Punto-de-Venta)). It acts as a virtual bridge, allowing authorized employees to query sales, inventory, and customer data using natural language processed by a local LLM (Ollama).
-
-## 🚀 Key Features
-
-*   **Native Authentication (Whitelist):** No passwords required. The bot validates the user's Telegram contact against the POS authorized phone list.
-*   **Session Management:** Local SQLite persistence creates 24-hour sessions to minimize external API calls.
-*   **Context Isolation:** Conversation history is strictly bound to the `telegram_id`, ensuring data privacy.
-*   **MCP Integration:** Modular architecture exposing POS tools and resources to the LLM.
-*   **Automated Time Translation:** Logic layer to translate business terms (e.g., "last month") into structured API parameters.
-
 ---
 
 ## ⚙️ Configuration
