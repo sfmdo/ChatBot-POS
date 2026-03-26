@@ -44,16 +44,16 @@ def get_chatbot_user(mobile_number: str):
     safe_number = quote(mobile_number)
     return _fetch_data(f"/chatbotusers/{safe_number}/")
 
-def obtener_telefonos_autorizados():
+def get_authorized_phones():
     """
     Extrae SOLO la lista de números permitidos para usar el bot de Telegram.
     Se conecta directamente en app/bot/handlers.py durante el comando /start.
     """
-    respuesta = get_all_chatbot_users()
+    response = get_all_chatbot_users()
     
-    if isinstance(respuesta, list):
-        return [user.get("mobile_number") for user in respuesta if "mobile_number" in user]
+    if isinstance(response, list):
+        return [user.get("mobile_number") for user in response if "mobile_number" in user]
     
-    logger.error(f"Falló la extracción de números autorizados: {respuesta}")
+    logger.error(f"Falló la extracción de números autorizados: {response}")
     
     return []

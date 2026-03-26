@@ -1,6 +1,6 @@
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes
-from app.services.ai_service import query_ai
+from app.services.ia_service import query_ai
 from app.models.database import (
     save_message, 
     get_user_context, 
