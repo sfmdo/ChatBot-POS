@@ -13,6 +13,7 @@ This project is an intelligent Telegram bot assistant designed to interface with
 
 ---
 
+
 ## Project Structure
 
 ```bash
@@ -111,6 +112,7 @@ If the user asks for "look-back" info (e.g., "last 3 months"), the Agent sends:
 The LLM uses these tools to interact with the POS system:
 
 ### 1. Analytics Module (`analytics_api`)
+*   `get_customer_sales(customer_id, start_date, end_date)`: Analyze specific client behavior (spending habits, favorite products).
 *   `get_sales_summary(start_date, end_date)`: Financial performance, average ticket, and peak hours.
 *   `get_product_ranking(limit, criterion, start_date, end_date)`: Top/Bottom selling products (`criterion`: "most", "least", "both").
 *   `get_low_stock(threshold)`: Products at or below the inventory threshold.
@@ -130,8 +132,10 @@ The LLM uses these tools to interact with the POS system:
 *   `get_all_products()`: Complete catalog including SKU, price, and "available to sell" stock.
 *   `get_all_promotions()`: List active discounts (e.g., Black Friday) and validity dates.
 *   `get_promotions_by_product(product_id)`: Check specific discounts for a single item.
+*   `get_product_by_id(product_id)`: Technical details, supplier info, and reserved stock.
 
 ### 5. Customers & Loyalty (`customers_api`)
 *   `get_all_customers()`: List of customers, "Frequent Flyer" status, and loyalty points.
 *   `get_customer_points_history(customer_id)`: Audit log of EARN and REDEEM point events.
 *   `get_customer_credit_history(customer_id)`: Store credit ledger (CHARGE and PAYMENT events).
+*   `get_customer_detail(customer_id)`: Full profile (Email, birthday, demographic data).
