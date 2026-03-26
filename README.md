@@ -1,7 +1,3 @@
-This is the updated and translated version of your documentation, incorporating the new project structure, the **Time Translator** logic, and the **POS Service Catalog** for the MCP (Model Context Protocol).
-
-***
-
 # POS Agent - Telegram Bot
 
 This project is an intelligent Telegram bot assistant designed to interface with a Point of Sale (POS) system ([GitHub Repository](https://github.com/Omescobell/Punto-de-Venta)). It acts as a virtual bridge, allowing authorized employees to query sales, inventory, and customer data using natural language processed by a local LLM (Ollama).
