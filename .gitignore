@@ -6,11 +6,28 @@ env/
 .env
 .env.*
 
-# Archivos de caché de Python y Testing
+# Python-generated files
 __pycache__/
-*.pyc
-.pytest_cache/
-.coverage
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
 
 #Base de datos
 pos_agent.db
+
+# Model resources and tokenizers
+rag-engine/RAG-Lite/resources/tokenizer/*
+!rag-engine/RAG-Lite/resources/tokenizer/.gitkeep
+
+# Logs
+log.txt
+*.log
+
+#ChromaDB
+data/vector_db/*
+
+#Embedder cache
+rag-engine/RAG-Lite/data/models/*
+rag-engine/RAG-Lite/test/data/*
