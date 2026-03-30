@@ -1,5 +1,8 @@
 # RAG-Lite
 
+## Main repository
+https://github.com/sfmdo/RAG-Lite/tree/main
+
 A lightweight, fully local Retrieval-Augmented Generation (RAG) pipeline. RAG-Lite is designed to ingest various document formats, chunk them efficiently, generate multilingual embeddings, and orchestrate context retrieval for Large Language Models—all without relying on external APIs for data storage or embedding generation.
 
 ## Key Features
