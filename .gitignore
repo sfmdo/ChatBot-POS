@@ -18,16 +18,17 @@ wheels/
 pos_agent.db
 
 # Model resources and tokenizers
-rag-engine/RAG-Lite/resources/tokenizer/*
-!rag-engine/RAG-Lite/resources/tokenizer/.gitkeep
+RAG_Lite/resources/tokenizer/*
+RAG_Lite/resources/tokenizer/.gitkeep
 
 # Logs
 log.txt
 *.log
 
 #ChromaDB
-data/vector_db/*
+RAG_Lite/data/vector_db/*
 
 #Embedder cache
-rag-engine/RAG-Lite/data/models/*
-rag-engine/RAG-Lite/test/data/*
+RAG_Lite/data/models/*
+RAG_Lite/test/data/*
+models_cache

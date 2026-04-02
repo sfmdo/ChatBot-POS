@@ -1,11 +1,12 @@
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.error import BadRequest, Forbidden, TelegramError
 from telegram.ext import ContextTypes
-from app.services.ia_service import query_ai
+from app.ai.agent_orchestrator import query_ai
+import textwrap
 from app.models.database import (
     save_message, 
     get_user_context, 
-    register_user_verification,  
+    verify_and_register_user,  
     verify_active_access        
 )
 import logging
@@ -38,72 +39,89 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_phone = contact.phone_number.replace("+", "").strip()
 
-    allowed_phones = get_authorized_phones()
+    allowed_phones = await get_authorized_phones()
 
     cleaned_phones = [str(n).replace("+", "").strip() for n in allowed_phones]
 
     if user_phone in cleaned_phones:
-        register_user_verification(telegram_id, user_phone)
+        await verify_and_register_user(telegram_id, user_phone)
         await update.message.reply_text("Acceso concedido, Ya puedes hacerme consultas por 24 horas.")
     else:
         await update.message.reply_text("Tu número no tiene permisos en el sistema. Contacta a tu administrador.")
 
-def split_long_message(text: str, chunk_size: int = 4000) -> list[str]:
-    """
-    Divide un texto largo en una lista de fragmentos más pequeños.
-    Usamos 4000 en lugar de 4096 para dejar un margen de seguridad.
-    """
-    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+
+def split_long_message(text, limit=4000):
+    return textwrap.wrap(text, limit, break_long_words=False, replace_whitespace=False)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
+    user_text = update.message.text
 
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
-
+    # 1. Validación de acceso
     if not verify_active_access(telegram_id):
-        await update.message.reply_text("Tu sesión expiró o no te has verificado. Usa /start para renovar tu acceso.")
+        await update.message.reply_text("Tu sesión expiró o no te has verificado. Usa /start.")
         return
 
-    temp_message = await update.message.reply_text("Pepe esta pensando, dale un momento...")
+    if not user_text:
+        await update.message.reply_text("No se ha recibido ningún texto.")
+        return
 
-    user_text = update.message.text
-    
-    if user_text is None:
-        ai_response = "No se ha recibido ningun texto del usuario"
-        await temp_message.edit_text(ai_response)
-    else:
-        ai_response = query_ai(user_text, telegram_id)
-    
-        try:
-            await temp_message.edit_text(ai_response) 
+    # 2. Mensaje inicial de "Pepe está pensando..."
+    temp_message = await update.message.reply_text("⏳ Pepe está iniciando su análisis...")
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
 
-        except BadRequest as e:
-            error_msg = str(e).lower()
+    last_status = ""
+    final_response = ""
 
-            if "Message_too_long" in error_msg:
-                logger.warning("La respuesta de la IA fue muy larga. Dividiendo en fragmentos...")
-                fragments = split_long_message(ai_response)
-                
-                await temp_message.edit_text(fragments[0])
-
-                for fragment in fragments[1:]:
-                    await update.message.reply_text(fragment)
-                    
-            elif "not modified" in error_msg:
-                pass
+    try:
+        # 3. Consumir el generador asíncrono de query_ai
+        async for chunk in query_ai(user_text, telegram_id):
+            # Si el chunk empieza con 💭 o 🔍 es un estado intermedio
+            if chunk.startswith("💭") or chunk.startswith("🔍"):
+                # Solo editamos si el estado cambió para evitar spam a la API de Telegram
+                if chunk != last_status:
+                    try:
+                        await temp_message.edit_text(chunk, parse_mode='Markdown')
+                        last_status = chunk
+                    except BadRequest as e:
+                        if "not modified" not in str(e).lower():
+                            logger.error(f"Error editando estado: {e}")
             else:
-                logger.error(f"Error BadRequest de Telegram: {e}")
-                await temp_message.edit_text("Pepe tuvo un problema de formato al enviar este mensaje.")
+                # Si no tiene esos prefijos, es la RESPUESTA FINAL
+                final_response = chunk
 
-        except Forbidden:
-            logger.warning(f"El usuario {telegram_id} bloqueó al bot. No se pudo enviar el mensaje.")
+        # 4. Enviar la respuesta final
+        if final_response:
+            try:
+                # Intentamos editar el mensaje temporal con la respuesta final
+                await temp_message.edit_text(final_response, parse_mode='Markdown')
+            except BadRequest as e:
+                error_msg = str(e).lower()
+                
+                # Manejo de mensajes muy largos
+                if "message is too long" in error_msg:
+                    logger.warning("Respuesta final demasiado larga. Dividiendo...")
+                    fragments = split_long_message(final_response)
+                    # Editamos el primero
+                    await temp_message.edit_text(fragments[0], parse_mode='Markdown')
+                    # Enviamos el resto como mensajes nuevos
+                    for fragment in fragments[1:]:
+                        await update.message.reply_text(fragment, parse_mode='Markdown')
+                
+                elif "can't parse entities" in error_msg:
+                    # Si el Markdown falla, enviamos como texto plano
+                    await temp_message.edit_text(final_response)
+                
+                elif "message is not modified" in error_msg:
+                    pass
+                else:
+                    raise e
 
-        except TelegramError as e:
-            logger.error(f"Fallo de conexión con Telegram: {e}")
-            await temp_message.edit_text("Pepe está teniendo problemas de señal.")
-
-        except Exception as e:
-            logger.error(f"Error interno: {e}")
-            await temp_message.edit_text("Ups, a Pepe le dio un dolor de cabeza (Error interno).")
+    except Exception as e:
+        logger.error(f"Error crítico en el flujo de Pepe: {e}")
+        try:
+            await temp_message.edit_text("❌ Lo siento, Pepe tuvo un error interno al procesar tu solicitud.")
+        except:
+            await update.message.reply_text("❌ Ocurrió un error crítico.")
 
     

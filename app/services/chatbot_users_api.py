@@ -1,3 +1,4 @@
+import asyncio
 from app.services.api_client import get_http_client
 from urllib.parse import quote
 import logging
@@ -6,54 +7,54 @@ logger = logging.getLogger(__name__)
 
 def _fetch_data(endpoint: str):
     """
-    Función ayudante para hacer peticiones GET a la API de usuarios.
-    Maneja el re-login automático (401) y devuelve errores controlados (403, 404).
+    Helper function to make GET requests to the users API.
+    Handles automatic re-login (401) and returns controlled errors (403, 404).
     """
     try:
         with get_http_client() as client:
             response = client.get(endpoint)
             
             if response.status_code == 401:
-                logger.warning(f"Token expirado en {endpoint}. Reintentando login...")
+                logger.warning(f"Token expired at {endpoint}. Retrying login...")
                 with get_http_client(force_relogin=True) as new_client:
                     response = new_client.get(endpoint)
             
             if response.status_code in [403, 404]:
-                logger.warning(f"Respuesta {response.status_code} en {endpoint}: {response.text}")
+                logger.warning(f"Response {response.status_code} at {endpoint}: {response.text}")
                 return response.json()
                 
             response.raise_for_status()
             return response.json()
             
     except Exception as e:
-        logger.error(f"Error crítico en la petición GET a {endpoint}: {e}")
-        return {"error": f"Error de conexión interno: {str(e)}"}
+        logger.error(f"Critical error in GET request to {endpoint}: {e}")
+        return {"error": f"Internal connection error: {str(e)}"}
 
 
-def get_all_chatbot_users():
+async def get_all_chatbot_users():
     """
-    Obtiene la lista de todos los usuarios registrados en el bot.
-    Retorna una lista de diccionarios o un diccionario con error.
+    Gets the list of all registered users in the bot.
+    Returns a list of dictionaries or a dictionary with an error.
     """
-    return _fetch_data("/chatbotusers/")
+    return await asyncio.to_thread(_fetch_data, "/chatbotusers/")
 
-def get_chatbot_user(mobile_number: str):
+async def get_chatbot_user(mobile_number: str):
     """
-    Obtiene los detalles de un usuario específico por su número de teléfono.
+    Gets the details of a specific user by their phone number.
     """
     safe_number = quote(mobile_number)
-    return _fetch_data(f"/chatbotusers/{safe_number}/")
+    return await asyncio.to_thread(_fetch_data, f"/chatbotusers/{safe_number}/")
 
-def get_authorized_phones():
+async def get_authorized_phones():
     """
-    Extrae SOLO la lista de números permitidos para usar el bot de Telegram.
-    Se conecta directamente en app/bot/handlers.py durante el comando /start.
+    Extracts ONLY the list of allowed numbers to use the Telegram bot.
+    Connects directly in app/bot/handlers.py during the /start command.
     """
-    response = get_all_chatbot_users()
+    response = await get_all_chatbot_users()
     
     if isinstance(response, list):
         return [user.get("mobile_number") for user in response if "mobile_number" in user]
     
-    logger.error(f"Falló la extracción de números autorizados: {response}")
+    logger.error(f"Failed to extract authorized numbers: {response}")
     
     return []

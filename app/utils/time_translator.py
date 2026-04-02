@@ -1,11 +1,10 @@
-# app/utils/time_translator.py
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 from typing import Dict, Optional, Tuple, Any, Callable
 
 class TimeTranslator:
     """
-    Manejador Central de Periodos de Tiempo.
+    Central Time Period Handler.
     """
     
     @staticmethod
@@ -19,7 +18,7 @@ class TimeTranslator:
             elif "unit" in request_data and "quantity" in request_data:
                 start, end = TimeTranslator._calculate_relative(request_data["unit"], request_data["quantity"], reference_date)
             else:
-                return {"error": "Formato de petición de tiempo no reconocido."}
+                return {"error": "Unrecognized time request format."}
 
             return {
                 "start_date": start.isoformat(),
@@ -30,9 +29,10 @@ class TimeTranslator:
 
     @staticmethod
     def _translate_absolute(period: str, ref_date: date) -> Tuple[date, date]:
-        """Traductor optimizado mediante un Diccionario de Funciones (Strategy Pattern)."""
+        """Optimized translator using a Function Dictionary (Strategy Pattern)."""
         period = period.lower()
         
+        # Keys remain in Spanish as the LLM will likely extract Spanish terms from the user's prompt
         strategies: Dict[str, Callable[[date], Tuple[date, date]]] = {
             "hoy": lambda d: (d, d),
             "ayer": lambda d: (d - timedelta(days=1), d - timedelta(days=1)),
@@ -52,13 +52,13 @@ class TimeTranslator:
 
         action = strategies.get(period)
         if not action:
-            raise ValueError(f"Periodo absoluto desconocido: {period}")
+            raise ValueError(f"Unknown absolute period: {period}")
             
         return action(ref_date)
 
     @staticmethod
     def _calculate_relative(unit: str, quantity: int, ref_date: date) -> Tuple[date, date]:
-        """Calculador relativo optimizado con Diccionario."""
+        """Optimized relative calculator using a Dictionary."""
         unit = unit.lower()
         
         strategies: Dict[str, Callable[[int, date], date]] = {
@@ -73,7 +73,7 @@ class TimeTranslator:
 
         action = strategies.get(unit)
         if not action:
-            raise ValueError(f"Unidad de tiempo relativa desconocida: {unit}")
+            raise ValueError(f"Unknown relative time unit: {unit}")
 
         start_date = action(quantity, ref_date)
         return start_date, ref_date

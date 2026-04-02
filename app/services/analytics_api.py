@@ -1,3 +1,4 @@
+import asyncio
 from app.services.api_client import get_http_client
 from typing import Optional, Dict, List, Any, Union
 import logging
@@ -6,9 +7,9 @@ logger = logging.getLogger(__name__)
 
 def _fetch_data(endpoint: str, params: Optional[Dict[Any, Any]] = None) -> Union[List[Any], Dict[Any, Any]]:
     """
-    Función ayudante para hacer peticiones GET a la API.
-    Maneja el re-login automático (401) y devuelve errores controlados (400, 404)
-    para que la IA pueda leerlos y entender por qué falló algo.
+    Helper function to make GET requests to the API.
+    Handles automatic re-login (401) and returns controlled errors (400, 403, 404)
+    so the AI can read them and understand why something failed.
     """
     if params is None:
         params = {}
@@ -16,72 +17,72 @@ def _fetch_data(endpoint: str, params: Optional[Dict[Any, Any]] = None) -> Union
     try:
         with get_http_client() as client:
             response = client.get(endpoint, params=params)
-            
 
             if response.status_code == 401:
-                logger.warning(f"Token expirado en {endpoint}. Reintentando login...")
+                logger.warning(f"Token expired at {endpoint}. Retrying login...")
                 with get_http_client(force_relogin=True) as new_client:
                     response = new_client.get(endpoint, params=params)
+            
             if response.status_code == 403:
-                return {"error": "Permiso denegado. El token actual no tiene privilegios de ADMIN u OWNER para ver proveedores."}
+                return {"error": "Permission denied. Current token lacks ADMIN or OWNER privileges."}
             
             if response.status_code in [400, 404]:
-                logger.warning(f"Respuesta {response.status_code} en {endpoint}: {response.text}")
+                logger.warning(f"Response {response.status_code} at {endpoint}: {response.text}")
                 return response.json()
                 
             response.raise_for_status()
             return response.json()
             
     except Exception as e:
-        logger.error(f"Error crítico en la petición a {endpoint}: {e}")
-        return {"error": f"Error de conexión interno: {str(e)}"}
+        logger.error(f"Critical error in request to {endpoint}: {e}")
+        return {"error": f"Internal connection error: {str(e)}"}
 
-def get_sales_summary(start_date=None, end_date=None):
-    """Genera un reporte financiero y operativo para un periodo."""
+async def get_sales_summary(start_date=None, end_date=None):
+    """Generates a financial and operational report for a period."""
     params = {}
     if start_date: params["start_date"] = start_date
     if end_date: params["end_date"] = end_date
-    return _fetch_data("/analytics/sales-summary/", params)
+    return await asyncio.to_thread(_fetch_data, "/analytics/sales-summary/", params)
 
-def get_product_ranking(limit=10, criterion="most", start_date=None, end_date=None):
-    """Devuelve el ranking de productos más o menos vendidos."""
+async def get_product_ranking(limit=10, criterion="most", start_date=None, end_date=None):
+    """Returns the ranking of most or least sold products."""
     params = {"limit": limit, "criterion": criterion.lower()}
     if start_date: params["start_date"] = start_date
     if end_date: params["end_date"] = end_date
-    return _fetch_data("/analytics/product-ranking/", params)
+    return await asyncio.to_thread(_fetch_data, "/analytics/product-ranking/", params)
 
-def get_low_stock(threshold=None):
-    """Identifica productos con inventario bajo."""
+async def get_low_stock(threshold=None):
+    """Identifies products with low inventory levels."""
     params = {"threshold": threshold} if threshold else {}
-    return _fetch_data("/analytics/reports/low-stock/", params)
+    return await asyncio.to_thread(_fetch_data, "/analytics/reports/low-stock/", params)
 
-def get_dead_inventory(reference_date=None):
-    """Identifica productos que no han tenido ventas desde una fecha."""
+async def get_dead_inventory(reference_date=None):
+    """Identifies products that have had no sales since a given date."""
     params = {"reference_date": reference_date} if reference_date else {}
-    return _fetch_data("/analytics/reports/dead-inventory/", params)
+    return await asyncio.to_thread(_fetch_data, "/analytics/reports/dead-inventory/", params)
 
-def get_customer_sales(customer_id, start_date=None, end_date=None):
-    """Obtiene el historial de compras y métricas de un cliente específico."""
+async def get_customer_sales(customer_id, start_date=None, end_date=None):
+    """Retrieves the purchase history and metrics for a specific customer."""
     params = {"customer_id": customer_id}
     if start_date: params["start_date"] = start_date
     if end_date: params["end_date"] = end_date
-    return _fetch_data("/analytics/customer-sales/", params)
+    return await asyncio.to_thread(_fetch_data, "/analytics/customer-sales/", params)
 
-def get_sales_velocity(identifier, period_days=30):
-    """Calcula la velocidad de venta y estima días de agotamiento."""
+async def get_sales_velocity(identifier, period_days=30):
+    """Calculates sales velocity and estimates days until depletion."""
     params = {"identifier": identifier, "period_days": period_days}
-    return _fetch_data("/analytics/sales-velocity/", params)
+    return await asyncio.to_thread(_fetch_data, "/analytics/sales-velocity/", params)
 
-def get_inventory_valuation(product_identifier=None):
-    """Calcula el valor financiero y ganancias proyectadas del inventario."""
+async def get_inventory_valuation(product_identifier=None):
+    """Calculates the financial value and projected profits of the inventory."""
     params = {}
     if product_identifier:
         params["product_identifier"] = product_identifier
-    return _fetch_data("/analytics/inventory-valuation/", params)
+    return await asyncio.to_thread(_fetch_data, "/analytics/inventory-valuation/", params)
 
-def get_product_contribution(product_identifier, start_date=None, end_date=None):
-    """Calcula el % de las ventas totales generadas por un producto."""
+async def get_product_contribution(product_identifier, start_date=None, end_date=None):
+    """Calculates the percentage of total sales generated by a product."""
     params = {"product_identifier": product_identifier}
     if start_date: params["start_date"] = start_date
     if end_date: params["end_date"] = end_date
-    return _fetch_data("/analytics/product-contribution/", params)
+    return await asyncio.to_thread(_fetch_data, "/analytics/product-contribution/", params)
