@@ -2176,7 +2176,7 @@ wheels = [
 [[package]]
 name = "rag-lite"
 version = "0.1.0"
-source = { git = "https://github.com/sfmdo/RAG-Lite#8732a7250d47c9d064907f16e1b1a1d2eb793806" }
+source = { git = "https://github.com/sfmdo/RAG-Lite#6e2b5cea44363e7e7d19203cadfeeb1b6a3b5de1" }
 dependencies = [
     { name = "chromadb" },
     { name = "dotenv" },

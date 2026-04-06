@@ -58,7 +58,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
 
     # 1. Validación de acceso
-    if not verify_active_access(telegram_id):
+    if not await verify_active_access(telegram_id):
         await update.message.reply_text("Tu sesión expiró o no te has verificado. Usa /start.")
         return
 

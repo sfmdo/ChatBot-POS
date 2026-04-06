@@ -41,8 +41,8 @@ async def finalize_storage(telegram_id: int, user_msg: str, assistant_msg: str):
             sql_assistant_content = assistant_msg
 
     try:
-        await asyncio.to_thread(save_message, telegram_id, "user", sql_user_content)
-        await asyncio.to_thread(save_message, telegram_id, "assistant", sql_assistant_content)
+        await save_message(telegram_id, "user", sql_user_content)
+        await save_message(telegram_id, "assistant", sql_assistant_content)
         logger.debug(f"SQL History updated for {telegram_id}")
     except Exception as e:
         logger.error(f"Failed to save to SQL: {e}")

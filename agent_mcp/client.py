@@ -11,7 +11,7 @@ class MCPClientManager:
         """Inicia el subproceso del servidor MCP usando uv y mantiene la sesión abierta."""
         server_params = StdioServerParameters(
             command="uv", 
-            args=["run -m", "agent_mcp.server"]
+            args=["run", "python", "-m", "agent_mcp.server"]
         )
         
         transport = await self.stack.enter_async_context(stdio_client(server_params))

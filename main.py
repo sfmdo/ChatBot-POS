@@ -1,4 +1,5 @@
 import logging
+import sys
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -8,12 +9,19 @@ from app.src.scripts.process_global_documents import process_global_documents
 
 from agent_mcp.client import mcp_manager
 
-# Logging configuration
 logging.basicConfig(
+    stream=sys.stderr, 
+    level=logging.INFO, 
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    force=True,
 )
+
+logging.getLogger("rag_lite").setLevel(logging.WARNING)
+logging.getLogger("chromadb").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 async def post_init_setup(app):
     """
