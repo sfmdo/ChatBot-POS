@@ -39,7 +39,7 @@
 
 ---
 
-### 2 TOOL: TOOL: get_product_ranking
+### 2 TOOL: get_product_ranking
 - **TOOL_NAME:** `get_product_ranking`
 - **DESCRIPTION:** Returns a ranked list of products. Supports relative lookbacks via `unit` and `quantity`.
 - **KEYWORDS:** top products, best sellers, worst products, sales ranking.
@@ -91,7 +91,7 @@
 
 ### 6 TOOL: get_inventory_valuation
 - **TOOL_NAME:** `get_inventory_valuation`
-- **DESCRIPTION:** Calculates the total monetary value of the inventory and projected profit margins.
+- **DESCRIPTION:** Calculates the total monetary value of the inventory and projected profit margins.Use ONLY for total asset reports. DO NOT use for individual product prices.
 - **KEYWORDS:** inventory value, warehouse worth, total assets, stock valuation, total cost.
 - **ARGUMENTS:** `{"product_identifier": string}`
 - **EXAMPLE_QUESTIONS:** 
@@ -126,7 +126,6 @@
 
 ---
 
-
 ### 9 TOOL: get_order_detail
 - **TOOL_NAME:** `get_order_detail`
 - **DESCRIPTION:** Retrieves the complete itemized breakdown of a specific transaction, including prices, quantities, and totals.
@@ -153,24 +152,35 @@
   - "Find the most recent cancelled tickets."
 - **JSON_FORMAT:** `{"tool": "search_recent_orders", "arguments": {"status": "PAID", "limit": 5}}`
 
-This is the **PRODUCTS_MODULE** documentation, normalized for RAG. It covers the catalog, specific product lookups, technical specifications, and active discounts.
 
 ---
 
-### 11 TOOL: get_all_products
-- **TOOL_NAME:** `get_all_products`
-- **DESCRIPTION:** Retrieves the entire company product catalog. Use this to COUNT total products, see the full price list, or check general stock.
-- **KEYWORDS:** product catalog, price list, all items, inventory list, count products, total inventory, how many items.
+### 11 TOOL: get_total_product_count
+- **TOOL_NAME:** `get_total_product_count`
+- **DESCRIPTION:** Returns the total number of products currently registered in the catalog. Use this for a quick inventory overview without listing individual items.
+- **KEYWORDS:** count products, total items, inventory size, catalog quantity, how many products.
 - **ARGUMENTS:** `{}`
 - **EXAMPLE_QUESTIONS:** 
-  - "Show me the full price list."
-  - "What products do we have in the catalog?"
-  - "List all items and their current stock."
-- **JSON_FORMAT:** `{"tool": "get_all_products", "arguments": {}}`
+  - "How many products do I have in total?" -> `{}`
+  - "Total count of items in the catalog." -> `{}`
+- **JSON_FORMAT:** `{"tool": "get_total_product_count", "arguments": {}}`
 
 ---
 
-### 12 TOOL: get_all_promotions
+### 12 TOOL: search_products_in_inventory
+- **TOOL_NAME:** `search_products_in_inventory`
+- **DESCRIPTION:** Primary tool for retrieving individual item data. Use this whenever you need to find the PRICE, STOCK LEVEL, or TECHNICAL DETAILS of any product in the catalog using its name, SKU, or database ID.
+- **KEYWORDS:** product lookup, price check, check stock, item cost, find product, unit price, catalog search, SKU lookup, item availability, product details, inventory search.
+- **ARGUMENTS:** `{ "id": int, "name": string, "sku": string, "supplier_id": int, "low_stock": bool, "price": float, "final_price": float, "tax_rate": float, "tax_rate_display": string }
+- **EXAMPLE_QUESTIONS:** 
+  - "What is the price of [Product Name]?" -> `{"name": "[Product Name]"}`
+  - "How much stock is left for SKU [Code]?" -> `{"sku": "[Code]"}`
+  - "Show me all information for product ID [ID Number]." -> `{"id": [ID Number]}`
+- **JSON_FORMAT:** `{"tool": "search_products_in_inventory", "arguments": {"name": "Product Name"}}`
+
+---
+
+### 13 TOOL: get_all_promotions
 - **TOOL_NAME:** `get_all_promotions`
 - **DESCRIPTION:** Retrieves a list of all currently active discounts, sales, and special offers across the store.
 - **KEYWORDS:** active offers, store discounts, sales, current promos, price drops.
@@ -183,7 +193,7 @@ This is the **PRODUCTS_MODULE** documentation, normalized for RAG. It covers the
 
 ---
 
-### 13 TOOL: get_promotions_by_product
+### 14 TOOL: get_promotions_by_product
 - **TOOL_NAME:** `get_promotions_by_product`
 - **DESCRIPTION:** Checks if a specific product (by ID) has an active discount or is part of a special offer.
 - **KEYWORDS:** check discount, item sale, product promo, discount status.
@@ -196,44 +206,28 @@ This is the **PRODUCTS_MODULE** documentation, normalized for RAG. It covers the
 
 ---
 
-### 14 TOOL: get_product_by_id
-- **TOOL_NAME:** `get_product_by_id`
-- **DESCRIPTION:** Returns detailed technical information, supplier data, SKU, and quantities currently reserved for pending orders.
-- **KEYWORDS:** technical specs, product details, supplier info, reserved stock, item ID lookup.
-- **ARGUMENTS:** `{"product_id": int}`
-- **EXAMPLE_QUESTIONS:** 
-  - "Technical details for product 101."
-  - "Who is the supplier for this item?"
-  - "How much stock is reserved for this product?"
-- **JSON_FORMAT:** `{"tool": "get_product_by_id", "arguments": {"product_id": 101}}`
+### 15 TOOL: get_total_customer_count
+* **TOOL_NAME:** `get_total_customer_count`
+* **DESCRIPTION:** Returns the total number of customers in the database. Use this for a quick overview of the customer base size.
+* **KEYWORDS:** count customers, total clients, shopper base size, how many customers.
+* **ARGUMENTS:** `{}`
+* **EXAMPLE_QUESTIONS:** 
+  - "How many customers are registered?" -> `{}`
+  - "Total count of shoppers." -> `{}`
+* **JSON_FORMAT:** `{"tool": "get_total_customer_count", "arguments": {}}`
 
 ---
 
-### 15 TOOL: search_product_by_sku
-- **TOOL_NAME:** `search_product_by_sku`
-- **DESCRIPTION:** Direct search for a product using its SKU (Stock Keeping Unit) string. Ideal for quick code lookups.
-- **KEYWORDS:** SKU search, barcode lookup, product code, find by SKU.
-- **ARGUMENTS:** `{"sku": string}`
-- **EXAMPLE_QUESTIONS:** 
-  - "Search for SKU A-450-B."
-  - "Find the product with code 12345."
-  - "Which product belongs to SKU 'COKE-01'?"
-- **JSON_FORMAT:** `{"tool": "search_product_by_sku", "arguments": {"sku": "A-450-B"}}`
-
-This is the **CUSTOMERS_MODULE** documentation, normalized for RAG. It covers the shopper directory, loyalty programs, credit management, and personal profiles.
-
----
-
-### 16 TOOL: get_all_customers
-- **TOOL_NAME:** `get_all_customers`
-- **DESCRIPTION:** Retrieves the full list of all registered customers, including frequent shoppers and members.
-- **KEYWORDS:** customer list, shopper directory, member base, frequent shoppers, client base.
-- **ARGUMENTS:** `{}`
-- **EXAMPLE_QUESTIONS:** 
-  - "Show me all registered customers."
-  - "List our frequent shoppers."
-  - "Who are the clients in our database?"
-- **JSON_FORMAT:** `{"tool": "get_all_customers", "arguments": {}}`
+### 16 TOOL: search_customers
+* **TOOL_NAME:** `search_customers`
+* **DESCRIPTION:** Targeted customer analysis. Allows searching by unified name, debt status, points, or birth month.
+* **KEYWORDS:** customer lookup, client profile, debtor search, owe money, outstanding balance, credit status, loyalty points, rewards balance, frequent shopper, birthday lookup, shopper info, CRM, customer contact, customers ID.
+* **ARGUMENTS:** `{ "id": int, "name": string, "is_frequent": bool, "has_debt": bool, "min_points": int, "birth_month": int }`
+* **EXAMPLE_QUESTIONS:** 
+  - "Is Oscar Gutierrez a frequent customer?" -> `{"name": "Oscar Gutierrez", "is_frequent": true}`
+  - "Show me all debtors." -> `{"has_debt": true}`
+  - "Search for customers born in February." -> `{"birth_month": 2}`
+* **JSON_FORMAT:** `{"tool": "search_customers", "arguments": {"name": "Oscar", "has_debt": true}}`
 
 ---
 
@@ -274,24 +268,31 @@ This is the **CUSTOMERS_MODULE** documentation, normalized for RAG. It covers th
   - "Show me the demographic data for user ID 10."
 - **JSON_FORMAT:** `{"tool": "get_customer_detail", "arguments": {"customer_id": 123}}`
 
-This is the **SUPPLIERS_MODULE** documentation, normalized for RAG. It covers the vendor directory and specific administrative/tax details of business partners.
+---
+
+### 20 TOOL: get_total_supplier_count
+* **TOOL_NAME:** `get_total_supplier_count`
+* **DESCRIPTION:** Returns the total count of registered suppliers in the system. Use this for quick administrative summaries.
+* **KEYWORDS:** count suppliers, total vendors, how many suppliers, wholesale partners count.
+* **ARGUMENTS:** `{}`
+* **JSON_FORMAT:** `{"tool": "get_total_supplier_count", "arguments": {}}`
 
 ---
 
-### 20 TOOL: get_all_suppliers
-- **TOOL_NAME:** `get_all_suppliers`
-- **DESCRIPTION:** Retrieves the complete directory of all registered suppliers and their general information.
-- **KEYWORDS:** supplier list, vendor directory, wholesale partners, list all suppliers.
-- **ARGUMENTS:** `{}`
-- **EXAMPLE_QUESTIONS:** 
-  - "Who are all our suppliers?"
-  - "Show me the list of registered vendors."
-  - "Give me the directory of wholesale partners."
-- **JSON_FORMAT:** `{"tool": "get_all_suppliers", "arguments": {}}`
+### 21 TOOL: search_suppliers
+* **TOOL_NAME:** `search_suppliers`
+* **DESCRIPTION:** Comprehensive search for supplier details including RFC, tax addresses, and phone numbers. Use this for detailed vendor profiling.
+* **KEYWORDS:** search suppliers, vendor contact info, supplier RFC lookup, tax address , suppiers id,providers ID, providers.
+* **ARGUMENTS:** `{ "id": int, "name": string, "contact_person": string, "rfc": string, "tax_address": string }`
+* **EXAMPLE_QUESTIONS:** 
+  - "What is the RFC for Marinela?" -> `{"name": "Marinela"}`
+  - "Find suppliers located in 'Col. Santa Maria'." -> `{"tax_address": "Santa Maria"}`
+  - "Get contact info for supplier ID 2." -> `{"id": 2}`
+* **JSON_FORMAT:** `{"tool": "search_suppliers", "arguments": {"name": "Marinela"}}`
 
 ---
 
-### 21 TOOL: get_supplier_detail
+### 22 TOOL: get_supplier_detail
 - **TOOL_NAME:** `get_supplier_detail`
 - **DESCRIPTION:** Retrieves the full profile of a specific supplier, including tax identification (RFC/Tax ID), contact email, phone number, and physical address.
 - **KEYWORDS:** supplier contact, vendor Tax ID, RFC, supplier address, vendor phone, supplier profile.
@@ -302,11 +303,9 @@ This is the **SUPPLIERS_MODULE** documentation, normalized for RAG. It covers th
   - "Get the profile for supplier ID 12."
 - **JSON_FORMAT:** `{"tool": "get_supplier_detail", "arguments": {"supplier_id": 10}}`
 
-This is the **CHATBOT_USERS_MODULE** documentation, normalized for RAG. It focuses on system security, access whitelists, and user verification.
-
 ---
 
-### 22 TOOL: get_all_chatbot_users
+### 23 TOOL: get_all_chatbot_users
 - **TOOL_NAME:** `get_all_chatbot_users`
 - **DESCRIPTION:** Retrieves the complete whitelist of authorized personnel who have permission to interact with the chatbot system.
 - **KEYWORDS:** whitelist, bot users, authorized personnel, access list, chatbot permissions.
@@ -319,7 +318,7 @@ This is the **CHATBOT_USERS_MODULE** documentation, normalized for RAG. It focus
 
 ---
 
-### 23 TOOL: get_chatbot_user
+### 24 TOOL: get_chatbot_user
 - **TOOL_NAME:** `get_chatbot_user`
 - **DESCRIPTION:** Verifies the specific authorization status and retrieves the last connection details for a user identified by their mobile phone number.
 - **KEYWORDS:** verify access, user status check, mobile number lookup, connection details, permission verify.
@@ -330,11 +329,9 @@ This is the **CHATBOT_USERS_MODULE** documentation, normalized for RAG. It focus
   - "Verify if this phone number is in the authorized list."
 - **JSON_FORMAT:** `{"tool": "get_chatbot_user", "arguments": {"mobile_number": "+1234567890"}}`
 
-This is the **SYSTEM_TOOLS_MODULE** documentation, normalized for RAG. These tools are the most critical, as they allow the agent to manage its own memory and retrieve the other documentation chunks you've just created.
-
 ---
 
-### 24 TOOL: fetch_chat_history
+### 25 TOOL: fetch_chat_history
 - **TOOL_NAME:** `fetch_chat_history`
 - **DESCRIPTION:** Retrieves the most recent messages from the current active conversation. Use this to resolve pronouns (e.g., "it", "him", "that") or to recall immediate previous instructions.
 - **KEYWORDS:** chat history, previous messages, conversation log, context, memory, what was said, repeat that.
