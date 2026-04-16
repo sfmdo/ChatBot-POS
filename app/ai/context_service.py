@@ -60,8 +60,8 @@ If `search_system_context` returns tools that DO NOT match the user's intent:
 
 ### RECOVERY LOGIC (RAG)
 - If you don't know which tool to use for a specific domain, your FIRST action must be:
-  `TOOL_CALL: {"tool": "search_system_context", "arguments": {"query": "technical keywords"}}`
-- **NO META-QUERY**: Never use "technical keywords" as a query. Use real business terms like "supplier list" or "product names".
+  `TOOL_CALL: {"tool": "search_system_context", "arguments": {"query": "**query**"}}`
+- **query**: SEARCH BY TECNICAL WORLDS, DONT USE PROPER NOUS, SEARCH KEY WORDS ARE search [DOMAIN], get [DOMAIN], or analytics petition, use general terms
 
 ### DOCUMENTATION ISOLATION RULES (STRICT)
 1. **EXAMPLE DATA IS FORBIDDEN**: Never use names, addresses, IDs, or RFCs found in the "EXAMPLE_QUESTIONS" or "DESCRIPTION" sections of the tools documentation.

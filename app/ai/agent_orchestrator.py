@@ -45,7 +45,7 @@ class ReActAgent:
                 "The only tool you need to call in this step is the system context tool"
                 "**PHASE 1: CONTEXTUAL ANALYSIS & ROADMAP**\n"
                 "1. **PAST CONTEXT**: Check if the User, ID, or SKU was mentioned in previous messages.\n"
-                "2. **DOMAIN**: Is this [PRODUCTS], [SUPPLIERS], or [CUSTOMERS]?\n"
+                "2. **DOMAIN**: Is this [PRODUCTS], [SUPPLIERS], [CUSTOMERS] or [SYSTEM]?\n"
                 "3. **SCHEMA CHECK**: Call 'search_system_context' to get the EXACT JSON keys for the tools you need. "
                 "DO NOT guess argument names (like 'query' or 'search'). Use what the documentation says.\n"
                 "4. **STRATEGY**: Define your path (e.g., Search Supplier -> Get ID -> Filter Products)."
