@@ -5,78 +5,79 @@ from app.utils.time_translator import TimeTranslator
 class TestTimeTranslator(unittest.TestCase):
     
     def setUp(self):
+        # Reference date: March 14, 2026
         self.ref_date = date(2026, 3, 14)
 
-    # PRUEBAS DE PERIODOS ABSOLUTOS
+    # ABSOLUTE PERIOD TESTS (English Keys)
 
-    def test_absolute_hoy(self):
-        req = {"period": "hoy"}
+    def test_absolute_today(self):
+        req = {"period": "today"}
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertEqual(res["start_date"], "2026-03-14")
         self.assertEqual(res["end_date"], "2026-03-14")
 
-    def test_absolute_este_mes(self):
-        req = {"period": "este_mes"}
+    def test_absolute_this_month(self):
+        req = {"period": "this_month"}
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertEqual(res["start_date"], "2026-03-01")
         self.assertEqual(res["end_date"], "2026-03-31")
 
     def test_absolute_q1(self):
-        # Q1 siempre debe ser del 1 de Enero al 31 de Marzo del año actual
+        # Q1 should be Jan 1st to March 31st of the current year
         req = {"period": "q1"}
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertEqual(res["start_date"], "2026-01-01")
         self.assertEqual(res["end_date"], "2026-03-31")
         
-    def test_absolute_año_pasado(self):
-        req = {"period": "año_pasado"}
+    def test_absolute_last_year(self):
+        req = {"period": "last_year"}
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertEqual(res["start_date"], "2025-01-01")
         self.assertEqual(res["end_date"], "2025-12-31")
 
-    # PRUEBAS DE PERIODOS RELATIVOS
+    # RELATIVE PERIOD TESTS (English Units)
 
-    def test_relative_ultimos_5_dias(self):
-        req = {"unit": "dia", "quantity": 5}
+    def test_relative_last_5_days(self):
+        req = {"unit": "day", "quantity": 5}
         res = TimeTranslator.process_request(req, self.ref_date)
-        # 14 de marzo menos 5 días = 9 de marzo
+        # March 14 minus 5 days = March 9
         self.assertEqual(res["start_date"], "2026-03-09")
         self.assertEqual(res["end_date"], "2026-03-14")
 
-    def test_relative_ultimos_2_meses(self):
-        req = {"unit": "mes", "quantity": 2}
+    def test_relative_last_2_months(self):
+        req = {"unit": "month", "quantity": 2}
         res = TimeTranslator.process_request(req, self.ref_date)
-        # 14 de marzo menos 2 meses = 14 de enero
+        # March 14 minus 2 months = Jan 14
         self.assertEqual(res["start_date"], "2026-01-14")
         self.assertEqual(res["end_date"], "2026-03-14")
 
-    def test_relative_ultimo_trimestre_duracion(self):
-        req = {"unit": "trimestre", "quantity": 1}
+    def test_relative_last_quarter_duration(self):
+        req = {"unit": "quarter", "quantity": 1}
         res = TimeTranslator.process_request(req, self.ref_date)
-        # 14 de marzo menos 3 meses (1 trimestre) = 14 de diciembre del año pasado
+        # March 14 minus 3 months (1 quarter) = Dec 14, 2025
         self.assertEqual(res["start_date"], "2025-12-14")
         self.assertEqual(res["end_date"], "2026-03-14")
 
-    # PRUEBAS DE MANEJO DE ERRORES
+    # ERROR HANDLING TESTS (English Messages)
 
     def test_invalid_absolute_period(self):
-        req = {"period": "navidad"}
+        req = {"period": "christmas"}
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertTrue("error" in res)
-        self.assertIn("desconocido", res["error"])
+        self.assertIn("Unknown absolute period", res["error"])
 
     def test_invalid_relative_unit(self):
-        req = {"unit": "decada", "quantity": 1}
+        req = {"unit": "decade", "quantity": 1}
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertTrue("error" in res)
-        self.assertIn("desconocida", res["error"])
+        self.assertIn("Unknown relative unit", res["error"])
 
     def test_malformed_request(self):
-        # Faltan claves válidas
-        req = {"rango": "ayer"} 
+        # Missing valid keys
+        req = {"range": "yesterday"} 
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertTrue("error" in res)
-        self.assertEqual(res["error"], "Formato de petición de tiempo no reconocido.")
+        self.assertIn("Unrecognized time request format", res["error"])
 
 if __name__ == '__main__':
     unittest.main()

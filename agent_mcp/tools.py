@@ -126,6 +126,15 @@ def setup_tools(mcp):
         return results[:20]
 
     @mcp.tool()
+    async def get_all_product_names() -> List[str]:
+        """
+        Returns a list containing only the names of all products currently in the inventory.
+        """
+        data = await products_api.get_all_products()
+
+        return [p["name"] for p in data if "name" in p]
+
+    @mcp.tool()
     async def get_all_promotions() -> Any:
         """Retrieves all currently active promotions, discounts, and sales."""
         return await products_api.get_all_promotions()
@@ -140,6 +149,16 @@ def setup_tools(mcp):
     def clean_money(value: str) -> float:
         if not value: return 0.0
         return float(re.sub(r'[^\d.]', '', str(value)))
+
+    @mcp.tool()
+    async def get_all_customer_names() -> List[str]:
+        """
+        Returns a list containing the unified full names (first_name + last_name) of all registered customers.
+        """
+        data = await customers_api.get_all_customers()
+    
+        
+        return [f"{c.get('first_name', '')} {c.get('last_name', '')}".strip() for c in data]
 
     @mcp.tool()
     async def get_total_customer_count() -> Dict[str, int]:
@@ -219,6 +238,15 @@ def setup_tools(mcp):
     # ! SUPPLIERS MODULE 
 
     @mcp.tool()
+    async def get_all_supplier_names() -> List[str]:
+        """
+        Returns a list containing only the names of all registered suppliers.
+        """
+        data = await suppliers_api.get_all_suppliers()
+    
+        return [s["name"] for s in data if "name" in s]
+
+    @mcp.tool()
     async def get_total_supplier_count() -> Dict[str, int]:
         """Returns the total number of registered suppliers."""
         data = await suppliers_api.get_all_suppliers()
@@ -247,10 +275,3 @@ def setup_tools(mcp):
 
         return results[:15] 
 
-    @mcp.tool()
-    async def get_supplier_detail(supplier_id: int) -> Any:
-        """
-        Retrieves full tax identification (RFC/Tax ID) and contact details (email, phone, address) 
-        of a specific supplier by its ID.
-        """
-        return await suppliers_api.get_supplier_detail(supplier_id=supplier_id)
