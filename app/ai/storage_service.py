@@ -19,27 +19,6 @@ async def finalize_storage(telegram_id: int, user_msg: str, assistant_msg: str):
     sql_user_content = user_msg
     sql_assistant_content = assistant_msg
 
-    if len(user_msg) > RAG_THRESHOLD:
-        context_to_rag.append({'role': 'user','content': f'{user_msg}'})
-        sql_user_content = "[LONG MESSAGE INSERTED INTO RAG - USE SEARCH TOOL TO RETRIEVE, PREFER USING THE DATETIME]"
-
-    if len(assistant_msg) > RAG_THRESHOLD:
-        context_to_rag.append({'role': 'assistant','content': f'{assistant_msg}'})
-        sql_assistant_content = "[DETAILED RESPONSE INSERTED INTO RAG - USE SEARCH TOOL TO RETRIEVE,PREFER USING THE DATETIME]"
-
-    if context_to_rag:
-        try:
-            await rag_orchestrator.ingest_user_context(
-                text=context_to_rag,
-                user_id=str(telegram_id),
-            )
-            logger.info(f"Long-term memory indexed for user {telegram_id}")
-        except Exception as e:
-            logger.error(f"Failed to save to RAG: {e}")
-            # Fallback: if RAG fails, keep original text in SQL
-            sql_user_content = user_msg
-            sql_assistant_content = assistant_msg
-
     try:
         await save_message(telegram_id, "user", sql_user_content)
         await save_message(telegram_id, "assistant", sql_assistant_content)

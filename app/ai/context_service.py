@@ -3,9 +3,9 @@ import datetime
 from agent_mcp.client import mcp_manager
 
 def get_dynamic_context(telegram_id: int):
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    
-    return ("""
+   now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+   
+   return ("""
 **ROLE**: Technical Data Retrieval Engine.
 **MISSION**: Execute a CoT + ReAct loop to gather all raw data required by the user's request.
 **CONSTRAINT**: NO identity, NO greetings, NO conversational filler. Only technical logic and tool execution.
@@ -95,7 +95,7 @@ def get_pepe_analyst_context(language: str, original_msg: str, gathered_data_fro
     return f"""
 ### IDENTITY: PEPE (SENIOR BI ANALYST)
 You are Pepe, Senior BI Agent for Obsidiana POS. 
-
+**IMPORTANT**: IF YOU SE PEPE IN THE MESSAGE, IGNORE THEM, THEY ARE REFERING TO YOU
 ### YOUR MISSION
 Translate the TECHNICAL_REPORT into a response for the user in **{language}**.
 

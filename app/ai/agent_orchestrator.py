@@ -21,13 +21,8 @@ class ReActAgent:
     async def initialize(self):
         """Prepara el contexto inicial con la jerarquía correcta."""
         identity_context = get_dynamic_context(self.telegram_id)
-    
-        past_history = await get_user_context(limit=1, telegram_id=self.telegram_id)
-    
         self.messages = [
             {"role": "system", "content": identity_context},
-            {"role": "system", "content": f"**PAST CONTEXT**:\n{past_history if past_history else 'NO PAST MESSAGES.'}"},
-        
             {"role": "user", "content": f"**USER PETITION**: {self.original_message}"}
         ]
 
@@ -158,7 +153,16 @@ class ReActAgent:
                 observation = await self._execute_tool(tool_name, tool_args)
                 print(f"**Observation**: \n {observation}\n")
             
-                self.messages.append({"role": "user", "content": f"**OBSERVATION**: {observation}"})
+                if tool_name == "search_system_context":
+                    rag_content = (
+                        "### IMPORTANT: SYSTEM TOOLS FOUND ###\n"
+                        "You MUST use one of the tools below to answer the user request. "
+                        "If a tool matches the intent, extract the arguments and CALL IT.\n\n"
+                        f"{observation}" 
+                    )
+                    self.messages.append({"role": "user", "content": rag_content})
+                else:
+                    self.messages.append({"role": "user", "content": f"**OBSERVATION**: {observation}"})
                 continue
 
             elif parsed["type"] == "final":

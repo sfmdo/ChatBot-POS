@@ -30,7 +30,7 @@
 - **TOOL_NAME:** `get_sales_summary`
 - **DESCRIPTION:** Generates a financial report. 
 - **⚠️ WARNING:** Choose ONLY ONE mode: `period` OR (`unit` + `quantity`) OR (`start_date` + `end_date`).
-- **KEYWORDS:** revenue, income, sales report, total earnings, financial summary.
+- **KEYWORDS:** revenue, income, sales report, total earnings, financial summary, sales symmary.
 - **ARGUMENTS:** `{"start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD", "period": "today"|"yesterday"|"this_month"|"last_month", "unit": "day"|"week"|"month"|"year", "quantity": int}`
 - **EXAMPLE_QUESTIONS:** 
   - "How much did we sell in the last 15 days?" -> `{"unit": "day", "quantity": 15}`
