@@ -21,8 +21,12 @@ class ReActAgent:
     async def initialize(self):
         """Prepara el contexto inicial con la jerarquía correcta."""
         identity_context = get_dynamic_context(self.telegram_id)
+    
+        past_history = await get_user_context(limit=1, telegram_id=self.telegram_id)
+        print(f"\n**History**:{past_history}")
         self.messages = [
             {"role": "system", "content": identity_context},
+            {"role": "system", "content": f"**PAST CONTEXT**:\n{past_history if past_history else 'NO PAST MESSAGES.'},**IMPORTANT**Ignore any past intents or failed goals from the history. "},
             {"role": "user", "content": f"**USER PETITION**: {self.original_message}"}
         ]
 
@@ -37,23 +41,24 @@ class ReActAgent:
             )
         elif step == 1:
             instruction += (
-                "The only tool you need to call in this step is the system context tool"
+                "The only tool you need to call in this step is the system context tool.\n"
                 "**PHASE 1: CONTEXTUAL ANALYSIS & ROADMAP**\n"
                 "1. **PAST CONTEXT**: Check if the User, ID, or SKU was mentioned in previous messages.\n"
-                "2. **DOMAIN**: Is this [PRODUCTS], [SUPPLIERS], [CUSTOMERS] or [SYSTEM]?\n"
+                "2. **DOMAIN**: Is this [PRODUCTS], [SUPPLIERS], [CUSTOMERS], [SYSTEM], [ANALYTICS] or [CONVERSATION]?\n"
                 "3. **SCHEMA CHECK**: Call 'search_system_context' to get the EXACT JSON keys for the tools you need. "
                 "DO NOT guess argument names (like 'query' or 'search'). Use what the documentation says.\n"
-                "4. **STRATEGY**: Define your path (e.g., Search Supplier -> Get ID -> Filter Products)."
+                "4. **STRATEGY**: Define your path (e.g., Search Supplier -> Get ID -> Filter Products. Or for Analytics -> search tool -> Execute)."
             )
         else:
             instruction += (
                 "**PHASE N: ITERATIVE EXECUTION & ERROR RECOVERY**\n"
                 "1. **ANALYZE LAST OBSERVATION**: \n"
-                "    - If the observation return the data of the tool, analyze it to see if that if the required for the objective of the **USER PETITION**"
+                "   - [SUCCESS]: If the observation returns the FINAL required data (e.g. the full analytics report, chat history, or a list of products), YOUR JOB IS DONE. Output FINAL ANSWER: <Raw Data>.\n"
                 "   - If 'ValidationError' or 'Unexpected keyword': You used a wrong JSON key. READ the tool definition again and FIX the argument name.\n"
                 "   - If 'Empty Result': The search was too specific. Try a broader search or a partial name.\n"
+                "   - If 'You already called this tool': You are in a loop. Change your strategy.\n"
                 "2. **REASONING**: If Strategy A fails, try Strategy B. For example, if searching products by name fails, search for the supplier first to get a list.\n"
-                "3. **MULTI-STEP**: Do not stop until you have the final data (prices, stock, etc.). Use the ID obtained in the previous step.\n"
+                "3. **MULTI-STEP**: Do not stop until you have the final data (prices, stock, etc.). If you only got a Supplier ID, you must use that ID in the next tool call to get the products.\n"
                 "**Format**: THOUGHT: (Deep analysis of the error or next step) -> TOOL_CALL: {JSON} OR FINAL ANSWER: (Full data)."
             )
         
@@ -155,10 +160,12 @@ class ReActAgent:
             
                 if tool_name == "search_system_context":
                     rag_content = (
-                        "### IMPORTANT: SYSTEM TOOLS FOUND ###\n"
-                        "You MUST use one of the tools below to answer the user request. "
-                        "If a tool matches the intent, extract the arguments and CALL IT.\n\n"
-                        f"{observation}" 
+                        f"**OBSERVATION**: \n"
+                        f"{observation}\n\n"
+                        "### CRITICAL SYSTEM DIRECTIVE ###\n"
+                        "Do NOT call 'search_system_context' again. "
+                        "Read the tools provided in the observation above. "
+                        "Extract the required arguments from the user's petition, pick the correct tool, and CALL IT now."
                     )
                     self.messages.append({"role": "user", "content": rag_content})
                 else:
@@ -167,20 +174,19 @@ class ReActAgent:
 
             elif parsed["type"] == "final":
                 final_text = parsed["data"]
-                await finalize_storage(self.telegram_id, self.original_message, final_text)
                 final_text_origin_language = await self._translate_to_pepe(final_answer=final_text)
                 print(f"\n=== FINAL TEXT TO THE USER===\n{final_text_origin_language}")
+                await finalize_storage(self.telegram_id, self.original_message, final_text_origin_language)
                 yield final_text_origin_language
                 
                 return
 
             else: 
                 fallback_text = parsed["data"]
-                await finalize_storage(self.telegram_id, self.original_message, fallback_text)
-                
-                translated = await self._translate_to_pepe(fallback_text)
-                print(f"\n=== FALLBACK TRANSLATED ===\n{translated}")
-                yield translated
+                translated_fallback = await self._translate_to_pepe(fallback_text)
+                print(f"\n=== FALLBACK TRANSLATED ===\n{translated_fallback}")
+                await finalize_storage(self.telegram_id, self.original_message, translated_fallback)
+                yield translated_fallback
 
                 return
 

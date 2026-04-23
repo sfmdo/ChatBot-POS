@@ -30,7 +30,7 @@
 - **TOOL_NAME:** `get_sales_summary`
 - **DESCRIPTION:** Generates a financial report. 
 - **⚠️ WARNING:** Choose ONLY ONE mode: `period` OR (`unit` + `quantity`) OR (`start_date` + `end_date`).
-- **KEYWORDS:** revenue, income, sales report, total earnings, financial summary, sales symmary.
+- **KEYWORDS:** revenue, income, sales report, total earnings, financial summary, sales symmary, sales analysis.
 - **ARGUMENTS:** `{"start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD", "period": "today"|"yesterday"|"this_month"|"last_month", "unit": "day"|"week"|"month"|"year", "quantity": int}`
 - **EXAMPLE_QUESTIONS:** 
   - "How much did we sell in the last 15 days?" -> `{"unit": "day", "quantity": 15}`
@@ -44,7 +44,7 @@
 - **TOOL_NAME:** `get_product_ranking`
 - **DESCRIPTION:** Returns a ranked list of products. 
 - **⚠️ WARNING:** Choose ONLY ONE mode: `period` OR (`unit` + `quantity`).
-- **KEYWORDS:** top products, best sellers, worst products, sales ranking.
+- **KEYWORDS:** top products, best sellers, worst products, sales ranking, products analysis.
 - **ARGUMENTS:** `{"limit": int, "criterion": "most"|"least", "period": string, "unit": "day"|"week"|"month"|"year", "quantity": int}`
 - **EXAMPLES:** 
   - "Top 5 products of the last 2 months" -> `{"limit": 5, "unit": "month", "quantity": 2}`
