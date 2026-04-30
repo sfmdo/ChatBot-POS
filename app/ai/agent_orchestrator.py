@@ -269,7 +269,7 @@ class ReActAgent:
     async def _translate_to_pepe(self, final_answer: str) -> str:
         """Traduce y aplica la personalidad de Pepe al resultado final."""
         translation_prompt = [
-            {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,original_msg=self.original_message,gathered_data_from_phase_1=final_answer,history=self.history_text)},
+            {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,original_msg=self.original_message,gathered_data_from_phase_1=final_answer)},
             {"role": "user", "content": f"ONLY RETURN DE **FINAL ANSWER**\n\n"}
         ]
         response = await call_ollama(translation_prompt)

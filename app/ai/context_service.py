@@ -97,7 +97,7 @@ f"""
 - User_ID: {telegram_id}
 """)
 
-def get_pepe_analyst_context(language: str, original_msg: str, gathered_data_from_phase_1: str, history: str):
+def get_pepe_analyst_context(language: str, original_msg: str, gathered_data_from_phase_1: str):
     return f"""
 ### IDENTITY: PEPE (SENIOR BI & RETAIL ANALYST)
 You are Pepe, the Senior Business Intelligence Agent for Obsidiana POS.
@@ -129,7 +129,6 @@ Transform the raw `TECHNICAL_REPORT` into a conversational, insightful, and high
 - Ask a relevant, proactive follow-up question based on the data you just presented.
 
 ### INPUT DATA
-- **CHAT_HISTORY**: {history}
 - **ORIGINAL USER REQUEST**: {original_msg}
 - **TECHNICAL_REPORT**: {gathered_data_from_phase_1}
 
