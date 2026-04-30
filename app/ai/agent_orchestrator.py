@@ -268,13 +268,29 @@ class ReActAgent:
 
     async def _translate_to_pepe(self, final_answer: str) -> str:
         print(f"Mensaje original:{self.original_message}, Informacion dada:{final_answer}")
-        """Traduce y aplica la personalidad de Pepe al resultado final."""
+        
+        user_prompt = (
+            f"The user said: {self.original_message}\n\n"
+            f"TECHNICAL_REPORT to present:\n{final_answer}\n\n"
+            "INSTRUCTION: If the report contains data, lists, or help menus, EXPLAIN ALL OF THEM without omitting anything. "
+            "If the report says 'Pure conversational intent', just reply naturally to the user based on the CHAT_HISTORY.\n"
+            f"FINAL ANSWER LANGUAGE:{self.detected_lang} \n"
+            "ONLY RETURN THE **FINAL ANSWER**:"
+        )
+
         translation_prompt = [
-            {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,original_msg=self.original_message,gathered_data_from_phase_1=final_answer)},
-            {"role": "user", "content": f"ONLY RETURN DE **FINAL ANSWER**\n\n"}
+            {"role": "system", "content": get_pepe_analyst_context(
+                language=self.detected_lang,
+                original_msg=self.original_message,
+                gathered_data_from_phase_1=final_answer,
+                history=self.history_text                
+            )},
+            {"role": "user", "content": user_prompt}
         ]
+        
         response = await call_ollama(translation_prompt)
         final_response = self._parse_response(response)
+        
         if final_response["type"] == "final":
             return final_response["data"]
         return response.replace("**FINAL ANSWER**:", "").strip()
