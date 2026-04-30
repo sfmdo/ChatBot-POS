@@ -148,7 +148,13 @@ def get_gatekeeper_context(history: str, user_petition: str) -> str:
 **CURRENT DATE**: {today}
 
 ### VALID DOMAINS:
-- **[PRODUCTS]**, **[SUPPLIERS]**, **[CUSTOMERS]**, **[ANALYTICS]**, **[GREETING_HELP]**, **[CONVERSATION]**, **[OFF_TOPIC]**.
+- **[SYSTEM]**: General help, "Who are you?", greetings, bot identity, capabilities. -> Search Keywords: "greeting", "capabilities", "help".
+- **[PRODUCTS]**: Stock, individual prices, inventory levels. -> Search Keywords: "inventory", "product price".
+- **[CUSTOMERS]**: Debt, points, individual history. -> Search Keywords: "customer search", "debt", "loyalty points".
+- **[SUPPLIERS]**: Vendors, RFC, supplier contact. -> Search Keywords: "supplier search", "provider info".
+- **[ANALYTICS]**: Total sales summaries, rankings, dead inventory, sales velocity. -> Search Keywords: "sales summary", "ranking", "velocity", "dead inventory".
+- **[CONVERSATION]**: User uses pronouns or asks about past messages. -> ACTION: Immediately call fetch_chat_history.
+- **[OFF_TOPIC]**: Queries completely unrelated to the POS system, business, or the bot itself.
 
 ### TIME_TRANSLATOR_LOGIC (STRICT)
 If the user mentions a timeframe, you MUST return a `time_arguments` object based on these 3 modes. If NO time is mentioned, return `null`.
@@ -171,13 +177,14 @@ If the user mentions a timeframe, you MUST return a `time_arguments` object base
 2. **FOLLOW-UPS & SHORT ANSWERS**: If the user answers "Yes", "Sí", "Claro" or "No" to a question previously asked by the bot in the history, it IS a data request (`requires_info: true`).
 3. **IMPLICIT RECONSTRUCTION**: You MUST reconstruct the user's short answer into a full technical query using the history. (e.g., If Bot asked: "Do you want to see the payment methods?" and User says: "Yes", the optimized_query is "get payment methods breakdown").
 4. **INHERIT TIME & IDs**: Always carry over any timeframes (e.g., this_year) or specific entities (e.g., product IDs, supplier names) mentioned in the history to the current request.
+5. **SYSTEM CONTEXT (MANDATORY)**: If the user asks about your identity ("¿quién eres?", "¿cómo funcionas?") or system capabilities, you MUST route it to `SYSTEM` with `requires_info: true` and translate it into an optimized query like "get system capabilities". DO NOT ignore these requests.
 
 ### JSON OUTPUT SCHEMA (STRICT):
 You must output ONLY a valid JSON object. No markdown formatting.
 {{
     "is_valid": boolean,
     "requires_info": boolean,
-    "domain": "PRODUCTS|CUSTOMERS|SUPPLIERS|ANALYTICS|GREETING_HELP|CONVERSATION|OFF_TOPIC",
+    "domain": "SYSTEM|PRODUCTS|CUSTOMERS|SUPPLIERS|ANALYTICS|CONVERSATION|OFF_TOPIC",
     "optimized_query": "string (Technical translation of the request. Exclude time words here)",
     "time_arguments": {{ "start_date": "str", "end_date": "str", "period": "str", "unit": "str", "quantity": int }} OR null,
     "reject_reason": "string (If is_valid is false, explain why. Otherwise null)"
@@ -185,8 +192,11 @@ You must output ONLY a valid JSON object. No markdown formatting.
 
 ### EXAMPLES TO FOLLOW:
 
+Current Request: "¿Qué puedes hacer y quién eres?"
+{{"is_valid": true, "requires_info": true, "domain": "SYSTEM", "optimized_query": "get system capabilities and identity", "time_arguments": null, "reject_reason": null}}
+
 Current Request: "Dame el resumen de ventas de los últimos 15 días"
-{{"is_valid": true, "requires_info": true, "domain": "ANALYTICS", "optimized_query": "get total sales summary", "time_arguments": {{"unit": "dia", "quantity": 15}}, "reject_reason": null}}
+{{"is_valid": true, "requires_info": true, "domain": "ANALYTICS", "optimized_query": "get total sales summary", "time_arguments": {{"unit": "day", "quantity": 15}}, "reject_reason": null}}
 
 Current Request: "Precio del Refresco"
 {{"is_valid": true, "requires_info": true, "domain": "PRODUCTS", "optimized_query": "search products in inventory for Refresco", "time_arguments": null, "reject_reason": null}}
