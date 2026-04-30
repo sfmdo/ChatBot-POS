@@ -147,7 +147,7 @@ class ReActAgent:
     async def generate_pepe_rejection(self,reject_reason: str) -> str:
         """Genera una respuesta de Pepe cuando la petición es rechazada."""
         prompt = [
-            {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,history=self.history_text,original_msg=reject_reason,gathered_data_from_phase_1="NO DATA")},
+            {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,original_msg=reject_reason,gathered_data_from_phase_1="NO DATA")},
             {"role": "user", "content": "El usuario preguntó algo fuera de lugar. Como Pepe, dile amablemente que solo puedes ayudarle con temas del negocio, ventas, inventario, etc. Usa un emoji. FINAL ANSWER:"}
         ]
         response = await call_ollama(prompt)
@@ -267,6 +267,7 @@ class ReActAgent:
                 return
 
     async def _translate_to_pepe(self, final_answer: str) -> str:
+        print(f"Mensaje original:{self.original_message}, Informacion dada:{final_answer}")
         """Traduce y aplica la personalidad de Pepe al resultado final."""
         translation_prompt = [
             {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,original_msg=self.original_message,gathered_data_from_phase_1=final_answer)},
