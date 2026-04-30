@@ -3,34 +3,39 @@
 ---
 
 ## [MODULE] TIME_TRANSLATOR_LOGIC
-- **PURPOSE:** Maps relative time expressions to API-compatible parameters.
-- **MODE 1: Absolute Dates**
 
-  - Use `start_date` and `end_date` in `YYYY-MM-DD` format for specific ranges.
+**Purpose:** Normalizes natural language time expressions into API-compatible date ranges (`YYYY-MM-DD`).
 
-- **MODE 2: Predefined Periods**
+**Operational **
 
-  - Use the `period` parameter: `"hoy"`, `"ayer"`, `"esta_semana"`, `"semana_pasada"`, `"este_mes"`, `"mes_pasado"`, `"este_año"`.
+**MODE 1: Absolute Dates**
 
-- **MODE 3: Retroactive Lookback (Relative)**
+Direct assignment of ranges using specific calendar start and end points.
 
-  - Use `unit` (dia, semana, mes, año) and `quantity` (integer).
+*   Format: start_date and end_date as YYYY-MM-DD.
 
-  - Example: "last 15 days" -> `unit: "dia", quantity: 15`.
-- **LOGIC_RULES:**
-  - **Daily:** "today" -> `period: "hoy"`, "yesterday" -> `period: "ayer"`
-  - **Weekly:** "this week" -> `period: "esta_semana"`, "last week" -> `period: "semana_pasada"`
-  - **Monthly:** "this month" -> `period: "este_mes"`, "last month" -> `period: "mes_pasado"`
-  - **Yearly:** "this year" -> `period: "este_año"`, "last year" -> `period: "año_pasado"`
-- **RETROACTIVE:** 
-  - Units: "days" -> `dia`, "weeks" -> `semana`, "months" -> `mes`, "years" -> `año`.
-  - Usage: `{"unit": "mes", "quantity": 3}` for "last 3 months".
+**MODE 2: Predefined Periods**
+
+Standardized keywords for common calendar ranges.
+
+*   **Daily:** `"today"`, `"yesterday"`
+*   **Weekly:** `"this_week"`, `"last_week"`
+*   **Monthly:** `"this_month"`, `"last_month"`
+*   **Yearly:** `"this_year"`, `"last_year"`
+*   **Quarters:** `"q1"`, `"q2"`, `"q3"`, `"q4"` (Based on current year).
+
+**MODE 3: Retroactive Lookback (Relative)**
+
+Calculates a range from a specific point in the past up to the reference date.
+*   **Parameters:** `unit` (string) and `quantity` (integer).
+*   **Supported Units:** `"day"`, `"week"`, `"month"`, `"year"`, `"quarter"`.
+*   **Example:** `"last 3 quarters"` → `unit: "quarter", quantity: 3`.
   
 ### 1 TOOL: get_sales_summary
 - **TOOL_NAME:** `get_sales_summary`
 - **DESCRIPTION:** Generates a financial report. 
 - **⚠️ WARNING:** Choose ONLY ONE mode: `period` OR (`unit` + `quantity`) OR (`start_date` + `end_date`).
-- **KEYWORDS:** revenue, income, sales report, total earnings, financial summary, sales symmary, sales analysis.
+- **KEYWORDS:** revenue, income, sales report, total earnings, financial summary, total sales summary, sales analysis, total sales,.
 - **ARGUMENTS:** `{"start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD", "period": "today"|"yesterday"|"this_month"|"last_month", "unit": "day"|"week"|"month"|"year", "quantity": int}`
 - **EXAMPLE_QUESTIONS:** 
   - "How much did we sell in the last 15 days?" -> `{"unit": "day", "quantity": 15}`
@@ -44,7 +49,7 @@
 - **TOOL_NAME:** `get_product_ranking`
 - **DESCRIPTION:** Returns a ranked list of products. 
 - **⚠️ WARNING:** Choose ONLY ONE mode: `period` OR (`unit` + `quantity`).
-- **KEYWORDS:** top products, best sellers, worst products, sales ranking, products analysis.
+- **KEYWORDS:** top products, best sellers, worst products, sales ranking, products analysis, product total sales.
 - **ARGUMENTS:** `{"limit": int, "criterion": "most"|"least", "period": string, "unit": "day"|"week"|"month"|"year", "quantity": int}`
 - **EXAMPLES:** 
   - "Top 5 products of the last 2 months" -> `{"limit": 5, "unit": "month", "quantity": 2}`
@@ -87,7 +92,7 @@
   - "When will we run out of Coca-Cola?"
   - "What is the sales velocity of SKU-100?"
   - "How many days of stock do I have left for this product?"
-- **JSON_FORMAT:** `{"tool": "get_sales_velocity", "arguments": {"identifier": "SKU-99", "period_days": 30}}`
+- **JSON_FORMAT:** `{"tool": "get_sales_velocity", "arguments": {"identifier": "[PRODUCT NAME OR SKU]", "period_days": 30}}`
 
 ---
 
@@ -113,7 +118,7 @@
 - **EXAMPLE_QUESTIONS:** 
   - "What was the contribution of SKU-100 in the last 30 days?" -> `{"product_identifier": "SKU-100", "unit": "day", "quantity": 30}`
   - "Sales impact of this product during last year" -> `{"product_identifier": "ID", "period": "año_pasado"}`
-- **JSON_FORMAT:** `{"tool": "get_product_contribution", "arguments": {"product_identifier": "A1", "unit": "day", "quantity": 30}}`
+- **JSON_FORMAT:** `{"tool": "get_product_contribution", "arguments": {"product_identifier": "[PRODUCT NAME OR SKU]", "unit": "day", "quantity": 30}}`
 
 ---
 
@@ -126,7 +131,7 @@
 - **EXAMPLE_QUESTIONS:** 
   - "What has customer 450 bought in the last 6 months?" -> `{"customer_id": 450, "unit": "month", "quantity": 6}`
   - "Spending habits of client 123 during 2023" -> `{"customer_id": 123, "start_date": "2023-01-01", "end_date": "2023-12-31"}`
-- **JSON_FORMAT:** `{"tool": "get_customer_sales", "arguments": {"customer_id": 123, "unit": "month", "quantity": 6}}`
+- **JSON_FORMAT:** `{"tool": "get_customer_sales", "arguments": {"customer_id": [CUSTOMER ID], "unit": "month", "quantity": 6}}`
 
 ---
 
@@ -139,7 +144,7 @@
   - "Show me the details for order ID 501."
   - "What was sold in ticket #45?"
   - "Give me the breakdown for order 1024."
-- **JSON_FORMAT:** `{"tool": "get_order_detail", "arguments": {"order_id": 501}}`
+- **JSON_FORMAT:** `{"tool": "get_order_detail", "arguments": {"order_id": [ORDER ID]}}`
 
 ---
 
@@ -154,7 +159,7 @@
   - "Search for folio number A-102."
   - "List all pending orders."
   - "Find the most recent cancelled tickets."
-- **JSON_FORMAT:** `{"tool": "search_recent_orders", "arguments": {"status": "PAID", "limit": 5}}`
+- **JSON_FORMAT:** `{"tool": "search_recent_orders", "arguments": {"status": "", "limit": 5}}`
 
 
 ---
@@ -181,7 +186,7 @@
   - "What is the price of [Product Name]?" -> `{"name": "[Product Name]"}`
   - "How much stock is left for SKU [Code]?" -> `{"sku": "[Code]"}`
   - "Show me all information for product ID [ID Number]." -> `{"id": [ID Number]}`
-- **JSON_FORMAT:** `{"tool": "search_products_in_inventory", "arguments": {"name": "Product Name"}}`
+- **JSON_FORMAT:** `{"tool": "search_products_in_inventory", "arguments": {"name": "[Product Name]"}}`
 
 ---
 
@@ -219,7 +224,7 @@
   - "Does product ID 45 have a discount?"
   - "Check if there's an offer for this item."
   - "Is this product on sale right now?"
-- **JSON_FORMAT:** `{"tool": "get_promotions_by_product", "arguments": {"product_id": 45}}`
+- **JSON_FORMAT:** `{"tool": "get_promotions_by_product", "arguments": {"product_id": [PRODUCT ID]}}`
 
 ---
 
@@ -257,7 +262,7 @@ FOR FILTERING CLIETS.
   - "Is Oscar Gutierrez a frequent customer?" -> `{"name": "Oscar Gutierrez", "is_frequent": true}`
   - "Show me all debtors." -> `{"has_debt": true}`
   - "Search for customers born in February." -> `{"birth_month": 2}`
-* **JSON_FORMAT:** `{"tool": "search_customers", "arguments": {"name": "Oscar", "has_debt": true}}`
+* **JSON_FORMAT:** `{"tool": "search_customers", "arguments": {"name": "[CUSTOMER NAME]", "has_debt": [TRUE OR FALSE]}}`
 
 ---
 
@@ -270,7 +275,7 @@ FOR FILTERING CLIETS.
   - "How many points does customer 101 have?"
   - "Show me the points redemption history for client 45."
   - "What is the rewards balance for shopper ID 99?"
-- **JSON_FORMAT:** `{"tool": "get_customer_points_history", "arguments": {"customer_id": 101}}`
+- **JSON_FORMAT:** `{"tool": "get_customer_points_history", "arguments": {"customer_id": [ID]}}`
 
 ---
 
@@ -283,7 +288,7 @@ FOR FILTERING CLIETS.
   - "How much does customer 88 owe?"
   - "Show the credit history for client 10."
   - "What is the available credit limit for ID 45?"
-- **JSON_FORMAT:** `{"tool": "get_customer_credit_history", "arguments": {"customer_id": 88}}`
+- **JSON_FORMAT:** `{"tool": "get_customer_credit_history", "arguments": {"customer_id": [ID]}}`
 
 ---
 
@@ -296,7 +301,7 @@ FOR FILTERING CLIETS.
   - "Get the profile for customer 123."
   - "What is the contact email for client 45?"
   - "Show me the demographic data for user ID 10."
-- **JSON_FORMAT:** `{"tool": "get_customer_detail", "arguments": {"customer_id": 123}}`
+- **JSON_FORMAT:** `{"tool": "get_customer_detail", "arguments": {"customer_id": [ID]}}`
 
 ---
 
@@ -319,7 +324,7 @@ FOR FILTERING CLIETS.
   - "What is the RFC for Marinela?" -> `{"name": "Marinela"}`
   - "Find suppliers located in 'Col. Santa Maria'." -> `{"tax_address": "Santa Maria"}`
   - "Get contact info for supplier ID 2." -> `{"id": 2}`
-* **JSON_FORMAT:** `{"tool": "search_suppliers", "arguments": {"name": "Marinela"}}`
+* **JSON_FORMAT:** `{"tool": "search_suppliers", "arguments": {"name": "[SUPPLIER NAME]"}}`
 
 ---
 

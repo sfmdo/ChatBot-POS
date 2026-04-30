@@ -1,7 +1,7 @@
 import json
 import re
 from typing import AsyncGenerator
-from .context_service import get_dynamic_context, get_pepe_analyst_context
+from .context_service import get_dynamic_context, get_pepe_analyst_context, get_gatekeeper_context
 from .llm_service import call_ollama
 from .storage_service import finalize_storage
 from app.models.database import get_user_context
@@ -17,23 +17,31 @@ class ReActAgent:
         self.detected_lang = "Spanish"
         self.last_action = ""
         self.messages = []
+        self.requires_info = True
+        self.history_text = "No Past history"
 
     async def initialize(self):
         """Prepara el contexto inicial con la jerarquía correcta."""
         identity_context = get_dynamic_context(self.telegram_id)
-    
-        past_history = await get_user_context(limit=1, telegram_id=self.telegram_id)
-        print(f"\n**History**:{past_history}")
         self.messages = [
             {"role": "system", "content": identity_context},
-            {"role": "system", "content": f"**PAST CONTEXT**:\n{past_history if past_history else 'NO PAST MESSAGES.'},**IMPORTANT**Ignore any past intents or failed goals from the history. "},
             {"role": "user", "content": f"**USER PETITION**: {self.original_message}"}
         ]
 
     def _build_step_nudge(self, step: int) -> str:
         instruction = f"\n\n--- [KERNEL STEP {step}/{self.max_steps}] ---\n"
         
-        if step == self.max_steps:
+        # --- NUEVA REGLA: BYPASS CONVERSACIONAL ---
+        if not self.requires_info:
+            instruction += (
+                "**PHASE 1: CONVERSATIONAL BYPASS**\n"
+                "The Gatekeeper determined this request does NOT require fetching database info.\n"
+                "DO NOT call any tools. DO NOT use search_system_context.\n"
+                "Immediately output EXACTLY -> FINAL ANSWER: Empty Technical Report. Pure conversational intent."
+            )
+        # ------------------------------------------
+        
+        elif step == self.max_steps:
             instruction += (
                 "**CRITICAL: LAST ATTEMPT.** Summarize all partial data found. "
                 "If a tool failed, explain technically why (e.g., 'Validation Error in argument X'). "
@@ -79,6 +87,74 @@ class ReActAgent:
             instrumented_msgs.append({"role": "system", "content": nudge})
             
         return instrumented_msgs
+
+    async def analyze_intent(self) -> dict:
+        """Evalúa la intención resolviendo el contexto y la inyecta al Gatekeeper."""
+    
+        # 1. Recuperar historial y aplanarlo
+        raw_history = await get_user_context(limit=2, telegram_id=self.telegram_id)
+        history_text = "No history."
+    
+        if raw_history and isinstance(raw_history, list):
+            history_lines = []
+            for msg in raw_history:
+                role = "Bot" if msg.get("role") == "assistant" else "User"
+                content = msg.get("content", "").replace("\n", " ")
+                history_lines.append(f"[{role}]: {content}")
+            history_text = "\n".join(history_lines)
+
+        # ¡NUEVO! Guardamos el historial en la clase para que Pepe lo use después
+        self.history_text = history_text
+
+        # 2. Obtener el prompt completamente formateado con los datos inyectados
+        gatekeeper_prompt = get_gatekeeper_context(history=history_text, user_petition=self.original_message)
+    
+        # 3. Enviarlo al LLM (Qwen 2.5 Coder)
+        # Al ponerlo en "user", forzamos a que el modelo responda inmediatamente al comando.
+        messages = [
+            {"role": "user", "content": gatekeeper_prompt}
+        ]
+    
+        raw_response = await call_ollama(messages)
+    
+        # 4. Extraer el JSON
+        # 4. Extraer el JSON
+        json_match = re.search(r"\{.*\}", raw_response, re.DOTALL)
+        if json_match:
+            try:
+                intent_data = json.loads(json_match.group(0))
+            
+                # --- NUEVO FAILSAFE PROGRAMÁTICO ---
+                # Si el dominio es técnico, SIEMPRE requiere información, sin importar qué diga el LLM.
+                technical_domains = ["PRODUCTS", "SUPPLIERS", "CUSTOMERS", "ANALYTICS"]
+                if intent_data.get("domain") in technical_domains:
+                    intent_data["requires_info"] = True
+                # -----------------------------------
+            
+                return intent_data
+            except json.JSONDecodeError:
+                pass
+            
+        # Fallback de seguridad
+        return {
+            "is_valid": True, 
+            "requires_info": True,
+            "domain": "SYSTEM", 
+            "optimized_query": "No se pudo entender la peticion del usuario", 
+            "reject_reason": None
+        }
+
+    async def generate_pepe_rejection(self,reject_reason: str) -> str:
+        """Genera una respuesta de Pepe cuando la petición es rechazada."""
+        prompt = [
+            {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,history=self.history_text,original_msg=reject_reason,gathered_data_from_phase_1="NO DATA")},
+            {"role": "user", "content": "El usuario preguntó algo fuera de lugar. Como Pepe, dile amablemente que solo puedes ayudarle con temas del negocio, ventas, inventario, etc. Usa un emoji. FINAL ANSWER:"}
+        ]
+        response = await call_ollama(prompt)
+    
+        final_text = re.split(r"FINAL\s*ANSWER:?", response, flags=re.IGNORECASE)[-1].strip()
+        await finalize_storage(self.telegram_id, self.original_message, final_text)
+        return final_text
 
     async def _execute_tool(self, name: str, args: Dict[str, Any]) -> str:
         """Maneja la ejecución de herramientas a través de MCP."""
@@ -193,8 +269,7 @@ class ReActAgent:
     async def _translate_to_pepe(self, final_answer: str) -> str:
         """Traduce y aplica la personalidad de Pepe al resultado final."""
         translation_prompt = [
-            {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,original_msg=self.original_message,
-                                                                gathered_data_from_phase_1=final_answer)},
+            {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,original_msg=self.original_message,gathered_data_from_phase_1=final_answer,history=self.history_text)},
             {"role": "user", "content": f"ONLY RETURN DE **FINAL ANSWER**\n\n"}
         ]
         response = await call_ollama(translation_prompt)
@@ -205,5 +280,39 @@ class ReActAgent:
     
 async def query_ai(message: str, telegram_id: int) -> AsyncGenerator[str, None]:
     agent = ReActAgent(telegram_id, message)
+    
+    yield "🛡️ *Analizando intención...*"
+    
+    # FASE 0: Gatekeeper con Contexto
+    intent_data = await agent.analyze_intent()
+    print(f"\n=== INTENT DATA ===\n{json.dumps(intent_data, indent=2)}")
+    
+    # Si la petición es rechazada
+    if not intent_data.get("is_valid", True):
+        rejection_msg = await agent.generate_pepe_rejection(intent_data.get("reject_reason", "Off-topic"))
+        yield rejection_msg
+        return
+
+    # FASE 1: Inicializar Agente ReAct
+    optimized_query = intent_data.get("optimized_query", message)
+    domain = intent_data.get("domain", "SYSTEM") 
+    time_args = intent_data.get("time_arguments") # <--- Obtenemos el diccionario JSON
+    
+    agent.requires_info = intent_data.get("requires_info", True)
+
+    # --- INYECCIÓN DEL TIEMPO AL AGENTE ---
+    if time_args:
+        # Lo convertimos a string JSON bonito para que el agente lo copie fácil
+        time_str = f"\n**READY-TO-USE TIME ARGUMENTS**: {json.dumps(time_args)}\n(Merge these exact keys into your TOOL_CALL arguments if the tool requires time)."
+    else:
+        time_str = ""
+    
+    agent.original_message = (
+        f"User Request: '{message}'\n"
+        f"Contextual Target: '{optimized_query}'\n"
+        f"Pre-calculated Domain: [{domain}]"
+        f"{time_str}"
+    )
+
     async for chunk in agent.run():
         yield chunk
