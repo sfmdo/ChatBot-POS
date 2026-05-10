@@ -49,7 +49,7 @@ Calculates a range from a specific point in the past up to the reference date.
 - **TOOL_NAME:** `get_product_ranking`
 - **DESCRIPTION:** Returns a ranked list of products. 
 - **⚠️ WARNING:** Choose ONLY ONE mode: `period` OR (`unit` + `quantity`).
-- **KEYWORDS:** top products, best sellers, worst products, sales ranking, products analysis, product total sales.
+- **KEYWORDS:** top products, best sellers, worst products, sales ranking, products analysis, product total sales, products by sales, get top products by sales, ranking.
 - **ARGUMENTS:** `{"limit": int, "criterion": "most"|"least", "period": string, "unit": "day"|"week"|"month"|"year", "quantity": int}`
 - **EXAMPLES:** 
   - "Top 5 products of the last 2 months" -> `{"limit": 5, "unit": "month", "quantity": 2}`

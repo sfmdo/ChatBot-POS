@@ -1,0 +1,81 @@
+{
+    "telegram_id": 6596706525,
+    "phase_1_gatekeeper_tests":[
+        {
+            "name": "Busqueda Simple de Producto",
+            "message": "Precio de la Coca-Cola",
+            "expected": { "domain": "PRODUCTS", "requires_info": true }
+        },
+        {
+            "name": "Consulta Analitica con Tiempo",
+            "message": "Cual fue el resumen de ventas de ayer?",
+            "expected": { "domain": "ANALYTICS", "requires_analysis": true, "time_args_exist": true }
+        },
+        {
+            "name": "Rechazo por Fuera de Tema",
+            "message": "dame una receta de cocina",
+            "expected": { "is_valid": false, "domain": "OFF_TOPIC" }
+        }
+    ],
+    "phase_2_react_loop_tests": [
+        {
+            "name": "Encadenamiento de Herramientas (Proveedor -> Productos)",
+            "message": "Usando la informacion del proveedor 'Marinela', dame todos sus productos.",
+            "description": "El agente DEBE primero llamar a 'search_suppliers' para obtener un ID, y LUEGO usar ese ID para llamar a 'search_products_in_inventory'. Su razonamiento ('THOUGHT') debe reflejar esto."
+        }
+    ],
+    "phase_3_pepe_analyst_tests": [
+        {
+            "name": "Formato y Analisis de Reporte de Ventas",
+            "original_message": "Resumen de ventas anual",
+            "technical_report": "{\"total_income\": 18828.12, \"avg_ticket\": 229.61, \"transactions\": 410, \"top_product\": {\"name\": \"Santiago\", \"units\": 8}, \"peak_hour\": \"01:00\"}",
+            "expected_keywords": ["18,828.12", "Santiago", "1:00 AM", "promedio"]
+        }
+    ],
+    "phase_4_full_conversation_test": [
+        { 
+            "turn": 1, 
+            "user_message": "¡Hola buenos días!" 
+        },
+        { 
+            "turn": 2, 
+            "user_message": "Que puedes hacer?" 
+        },
+        { 
+            "turn": 3, 
+            "user_message": "¿Me puedes decir cuántos productos y cuántos clientes tenemos registrados en total?" 
+        },
+        { 
+            "turn": 4, 
+            "user_message": "Busca el RFC del proveedor 'Pepsico' y luego dame la lista de todos los productos que nos surte." 
+        },
+        { 
+            "turn": 5, 
+            "user_message": "¿Cuál es la velocidad de ventas y los días de stock del primer producto de esa lista?" 
+        },
+        { 
+            "turn": 6, 
+            "user_message": "Cambiando de tema, ¿cuál fue el top 5 de productos más vendidos de este trimestre?" 
+        },
+        { 
+            "turn": 7, 
+            "user_message": "De ese top, ¿cuál fue la contribución en ingresos del producto número uno durante el mes pasado?" 
+        },
+        { 
+            "turn": 8, 
+            "user_message": "Busca a la cliente 'Maria Fernandez' y revisa su historial de crédito para ver si nos debe dinero." 
+        },
+        { 
+            "turn": 9, 
+            "user_message": "Ahora búscame las últimas 3 ventas que se quedaron en estado PENDING." 
+        },
+        { 
+            "turn": 10, 
+            "user_message": "Dame el detalle completo de los artículos del primer ticket de esa lista." 
+        },
+        { 
+            "turn": 11, 
+            "user_message": "Para terminar el día, calcúlame la valoración total de todo nuestro inventario actual." 
+        }
+    ]
+}

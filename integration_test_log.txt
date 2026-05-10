@@ -1,0 +1,102 @@
+INICIO DE PRUEBAS DE INTEGRACIÓN
+FECHA: 2026-05-09 18:17:51
+============================================================
+
+
+
+==================== [FASE: GATEKEEPER (ANALYZE_INTENT)] ====================
+
+--- CASO DE PRUEBA: Busqueda Simple de Producto ---
+Input: 'Precio de la Coca-Cola'
+Output JSON:
+{
+  "is_valid": true,
+  "requires_info": true,
+  "requires_analysis": false,
+  "domain": "PRODUCTS",
+  "optimized_query": "search products in inventory for Coca-Cola",
+  "time_arguments": null,
+  "reject_reason": null
+}
+RESULTADO: ✅ ÉXITO
+
+--- CASO DE PRUEBA: Consulta Analitica con Tiempo ---
+Input: 'Cual fue el resumen de ventas de ayer?'
+Output JSON:
+{
+  "is_valid": true,
+  "requires_info": true,
+  "requires_analysis": true,
+  "domain": "ANALYTICS",
+  "optimized_query": "get total sales summary for supplier 'Marinela'",
+  "time_arguments": {
+    "period": "yesterday"
+  },
+  "reject_reason": null
+}
+RESULTADO: ✅ ÉXITO
+
+--- CASO DE PRUEBA: Rechazo por Fuera de Tema ---
+Input: 'dame una receta de cocina'
+Output JSON:
+{
+  "is_valid": false,
+  "requires_info": false,
+  "requires_analysis": false,
+  "domain": "OFF_TOPIC",
+  "optimized_query": null,
+  "time_arguments": null,
+  "reject_reason": "The user is asking for a cooking recipe, which is unrelated to the business."
+}
+RESULTADO: ✅ ÉXITO
+
+
+==================== [FASE: REACT LOOP (AGENT.RUN)] ====================
+
+--- CASO DE PRUEBA: Encadenamiento de Herramientas (Proveedor -> Productos) ---
+Input: 'Usando la informacion del proveedor 'Marinela', dame todos sus productos.'
+Objetivo: El agente DEBE primero llamar a 'search_suppliers' para obtener un ID, y LUEGO usar ese ID para llamar a 'search_products_in_inventory'. Su razonamiento ('THOUGHT') debe reflejar esto.
+Observando el proceso del agente (THOUGHTS y TOOL_CALLS):
+  -> 🧠 *💡 The user wants products from the supplier 'Marinela'. According to the observation, the `search_suppliers` tool is needed to get the supplier's ID. I will call this tool with the name "Marinela".*
+  -> 🧠 *💡 The `search_suppliers` tool returned the supplier ID for 'Marinela'. Now, I will use this ID to search for products from this supplier.*
+  -> 🧠 *💡 The `search_products_in_inventory` tool returned a list of products from the supplier 'Marinela'. I have all the required data.*
+RESULTADO: ✅ PROCESO COMPLETADO (Revisar logs para calidad del razonamiento)
+
+
+==================== [FASE: ANALISTA PEPE (_TRANSLATE_TO_PEPE)] ====================
+
+--- CASO DE PRUEBA: Formato y Analisis de Reporte de Ventas ---
+Input (Technical Report): '{"total_income": 18828.12, "avg_ticket": 229.61, "transactions": 410, "top_product": {"name": "Santiago", "units": 8}, "peak_hour": "01:00"}'
+Output (Respuesta de Pepe):
+📊 Resumen Ejecutivo: En el año en curso, se ha generado un ingreso total de $18,828.12 a través de 410 transacciones, con una media de ticket de $229.61. El producto más vendido es "Santiago" con 8 unidades vendidas. La hora pico de ventas es a las 1:00 AM.
+
+🧠 Análisis Detallado:
+- Ingreso Total: Se ha acumulado un ingreso total de $18,828.12 en el año.
+- Media de Ticket: El promedio de cada transacción es de $229.61, lo que indica una venta típica por encargo.
+- Transacciones: Se han registrado 410 transacciones en total durante el año.
+- Producto Más Vendido: El producto "Santiago" ha sido el más vendido con 8 unidades vendidas.
+- Hora Pico de Ventas: Las ventas alcanzan su punto máximo a las 1:00 AM.
+
+💡 Recomendación: Dado que la hora pico de ventas es muy tarde en la noche, considera ajustar tus estrategias de marketing y promociones para maximizar las ventas durante horarios más habituales del día. Además, podrías explorar nuevas formas de aumentar la demanda del producto "Santiago".
+
+¿Te gustaría analizar algún otro aspecto de tu negocio o necesitas más detalles sobre estos datos?
+RESULTADO: ✅ ÉXITO
+
+
+==================== [FASE: ORQUESTADOR COMPLETO (QUERY_AI)] ====================
+
+--- CASO DE PRUEBA: Turno 1 ---
+Input: '¡Hola buenos días!'
+Respuesta del orquestador:
+  -> 🛡️ *Analizando intención...*
+  -> 🧠 ****
+  -> ¡Hola! ¿En qué puedo ayudarte hoy?
+RESULTADO: ✅ TURNO COMPLETADO
+
+--- CASO DE PRUEBA: Turno 2 ---
+Input: 'Que puedes hacer?'
+Respuesta del orquestador:
+  -> 🛡️ *Analizando intención...*
+  -> 🧠 *💡 The user asked "Que puedes hacer?" which translates to "What can you do?" in English. This is a request for general help or system capabilities. According to the observation, the `system_capabilities` tool is the appropriate choice to retrieve a comprehensive technical help guide.*
+  -> 🧠 *💡 The user asked "Que puedes hacer?" which translates to "What can you do?" in English. This is a request for general help or system capabilities. According to the observation, the `system_capabilities` tool is the appropriate choice to retrieve a comprehensive technical help guide.*
+  -> 🧠 *💡 The previous tool call for `system_capabilities` has already been executed, and the observation provides a comprehensive technical help guide. Since the user's request was to know what the system can do, this information is sufficient.*

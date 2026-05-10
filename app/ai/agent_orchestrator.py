@@ -2,11 +2,11 @@ import json
 import re
 from typing import AsyncGenerator
 from .context_service import get_dynamic_context, get_pepe_analyst_context, get_gatekeeper_context
-from .llm_service import call_ollama
+from .llm_service import call_openai_standard
 from .storage_service import finalize_storage
 from app.models.database import get_user_context
 from agent_mcp.client import mcp_manager
-from typing import AsyncGenerator, Dict, List, Any, Optional
+from typing import AsyncGenerator, Dict, List, Any
 from mcp.types import TextContent
 
 class ReActAgent:
@@ -19,6 +19,9 @@ class ReActAgent:
         self.messages = []
         self.requires_info = True
         self.history_text = "No Past history"
+        self.requires_analysis = False
+        self.pepemodel = 1
+        self.qwenmodel = 2
 
     async def initialize(self):
         """Prepara el contexto inicial con la jerarquía correcta."""
@@ -31,7 +34,15 @@ class ReActAgent:
     def _build_step_nudge(self, step: int) -> str:
         instruction = f"\n\n--- [KERNEL STEP {step}/{self.max_steps}] ---\n"
         
-        # --- NUEVA REGLA: BYPASS CONVERSACIONAL ---
+        if not self.requires_info and self.requires_analysis:
+            instruction += (
+                "**PHASE 1: CONTEXTUAL ANALYSIS BYPASS**\n"
+                "The Gatekeeper determined this request does NOT require fetching new database info, but it DOES require analyzing past context.\n"
+                "1. DO NOT call any database or inventory tools.\n"
+                "2. You may ONLY call the 'fetch_chat_history' tool (Limit: 1 time) to retrieve the formatted history.\n"
+                "3. Analyze the history and immediately output EXACTLY -> FINAL ANSWER: [Your detailed summary or analysis of the retrieved context]."
+            )
+        
         if not self.requires_info:
             instruction += (
                 "**PHASE 1: CONVERSATIONAL BYPASS**\n"
@@ -39,7 +50,6 @@ class ReActAgent:
                 "DO NOT call any tools. DO NOT use search_system_context.\n"
                 "Immediately output EXACTLY -> FINAL ANSWER: Empty Technical Report. Pure conversational intent."
             )
-        # ------------------------------------------
         
         elif step == self.max_steps:
             instruction += (
@@ -57,18 +67,16 @@ class ReActAgent:
                 "DO NOT guess argument names (like 'query' or 'search'). Use what the documentation says.\n"
                 "4. **STRATEGY**: Define your path (e.g., Search Supplier -> Get ID -> Filter Products. Or for Analytics -> search tool -> Execute)."
             )
-        else:
+        else: 
             instruction += (
-                "**PHASE N: ITERATIVE EXECUTION & ERROR RECOVERY**\n"
-                "1. **ANALYZE LAST OBSERVATION**: \n"
-                "   - [SUCCESS]: If the observation returns the FINAL required data (e.g. the full analytics report, chat history, or a list of products), YOUR JOB IS DONE. Output FINAL ANSWER: <Raw Data>.\n"
-                "   - If 'ValidationError' or 'Unexpected keyword': You used a wrong JSON key. READ the tool definition again and FIX the argument name.\n"
-                "   - If 'Empty Result': The search was too specific. Try a broader search or a partial name.\n"
-                "   - If 'You already called this tool': You are in a loop. Change your strategy.\n"
-                "2. **REASONING**: If Strategy A fails, try Strategy B. For example, if searching products by name fails, search for the supplier first to get a list.\n"
-                "3. **MULTI-STEP**: Do not stop until you have the final data (prices, stock, etc.). If you only got a Supplier ID, you must use that ID in the next tool call to get the products.\n"
-                "**Format**: THOUGHT: (Deep analysis of the error or next step) -> TOOL_CALL: {JSON} OR FINAL ANSWER: (Full data)."
-            )
+        "**PHASE N: EXECUTION & ADAPTATION**\n"
+        "1. **ANALYZE LAST OBSERVATION**: Briefly assess the result from the previous tool call.\n"
+        "2. **IMMEDIATE ACTION**: Based on your analysis, you MUST either:\n"
+        "   a) **Call the NEXT logical tool** to continue your plan.\n"
+        "   b) **Output FINAL ANSWER** if you have all the data.\n"
+        "**CRITICAL**: DO NOT stay in a thinking loop. Analyze, then ACT. Your goal is to progress, not to perfect the plan indefinitely.\n"
+        "**Format**: THOUGHT: (Brief analysis and next action) -> TOOL_CALL: {JSON} OR FINAL ANSWER: (Full data)."
+        )
         
         return f"{instruction}\nSystem Language: English (Technical)\n---"
 
@@ -115,7 +123,7 @@ class ReActAgent:
             {"role": "user", "content": gatekeeper_prompt}
         ]
     
-        raw_response = await call_ollama(messages)
+        raw_response = await call_openai_standard(messages=messages, temperature=0.5, model=self.pepemodel)
     
         # 4. Extraer el JSON
         # 4. Extraer el JSON
@@ -150,7 +158,7 @@ class ReActAgent:
             {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,original_msg=reject_reason,gathered_data_from_phase_1="NO DATA")},
             {"role": "user", "content": "El usuario preguntó algo fuera de lugar. Como Pepe, dile amablemente que solo puedes ayudarle con temas del negocio, ventas, inventario, etc. Usa un emoji. FINAL ANSWER:"}
         ]
-        response = await call_ollama(prompt)
+        response = await call_openai_standard(messages=prompt, temperature= 0.7,model=self.qwenmodel)
     
         final_text = re.split(r"FINAL\s*ANSWER:?", response, flags=re.IGNORECASE)[-1].strip()
         await finalize_storage(self.telegram_id, self.original_message, final_text)
@@ -182,8 +190,10 @@ class ReActAgent:
         if re.search(r"TOOL_CALL", content, re.IGNORECASE):
             json_match = re.search(r"\{.*\}", content, re.DOTALL)
             if json_match:
+                raw_json_string = json_match.group(0)
+                print(f"\n--- RAW JSON FROM LLM ---\n{raw_json_string}\n-------------------------") # Añade esto
                 try:
-                    return {"type": "tool", "data": json.loads(json_match.group(0))}
+                    return {"type": "tool", "data": json.loads(raw_json_string)}
                 except:
                     return {"type": "error", "data": "Invalid JSON format."}
         
@@ -210,7 +220,8 @@ class ReActAgent:
         for step in range(1, self.max_steps + 1):
             print(f"\n{'='*20} [DEBUG STEP {step}] {'='*20}")
             prepared_msgs = await self._prepare_messages(step)
-            raw_content = await call_ollama(prepared_msgs)
+            stop_words = ["OBSERVATION:", "### OBSERVATION", "\nObservation:", "**OBSERVATION**"]
+            raw_content = await call_openai_standard(prepared_msgs, stop_sequences=stop_words, temperature=0.1,model=self.pepemodel)
             if not raw_content: break
             print(f"{raw_content}")
             thought = re.split(r"TOOL_CALL|FINAL\s*ANSWER", raw_content, flags=re.IGNORECASE)[0]
@@ -250,6 +261,9 @@ class ReActAgent:
 
             elif parsed["type"] == "final":
                 final_text = parsed["data"]
+                if not self.requires_info:
+                    final_text += f"\nHISTORY CHAT TO COMPLETE THE ANSWE\n {self.history_text}"
+                    print(f"\n Texto final: {final_text}\n")
                 final_text_origin_language = await self._translate_to_pepe(final_answer=final_text)
                 print(f"\n=== FINAL TEXT TO THE USER===\n{final_text_origin_language}")
                 await finalize_storage(self.telegram_id, self.original_message, final_text_origin_language)
@@ -288,7 +302,7 @@ class ReActAgent:
             {"role": "user", "content": user_prompt}
         ]
         
-        response = await call_ollama(translation_prompt)
+        response = await call_openai_standard(translation_prompt, temperature=0.7,model=self.pepemodel)
         final_response = self._parse_response(response)
         
         if final_response["type"] == "final":
@@ -316,6 +330,7 @@ async def query_ai(message: str, telegram_id: int) -> AsyncGenerator[str, None]:
     time_args = intent_data.get("time_arguments") # <--- Obtenemos el diccionario JSON
     
     agent.requires_info = intent_data.get("requires_info", True)
+    agent.requires_analysis = intent_data.get("requires_analysis", False)
 
     # --- INYECCIÓN DEL TIEMPO AL AGENTE ---
     if time_args:
