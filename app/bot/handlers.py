@@ -7,7 +7,7 @@ from app.models.database import (
     verify_and_register_user,  
     verify_active_access        
 )
-from split_text import split_long_message
+from app.bot.split_text import split_long_message
 import logging
 
 logger = logging.getLogger(__name__)
