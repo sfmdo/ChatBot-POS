@@ -160,7 +160,7 @@ class ReActAgent:
             {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,original_msg=reject_reason,gathered_data_from_phase_1="NO DATA")},
             {"role": "user", "content": "El usuario preguntó algo fuera de lugar. Como Pepe, dile amablemente que solo puedes ayudarle con temas del negocio, ventas, inventario, etc. Usa un emoji. FINAL ANSWER:"}
         ]
-        response = await call_openai_standard(messages=prompt, temperature= 0.7,model=self.qwenmodel)
+        response = await call_openai_standard(messages=prompt, temperature= 0.7,model=self.pepemodel)
     
         final_text = re.split(r"FINAL\s*ANSWER:?", response, flags=re.IGNORECASE)[-1].strip()
         await finalize_storage(self.telegram_id, self.original_message, final_text)

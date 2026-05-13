@@ -1,5 +1,5 @@
 INICIO DE PRUEBAS DE INTEGRACIÓN
-FECHA: 2026-05-09 18:17:51
+FECHA: 2026-05-12 22:03:17
 ============================================================
 
 
@@ -16,7 +16,11 @@ Output JSON:
   "domain": "PRODUCTS",
   "optimized_query": "search products in inventory for Coca-Cola",
   "time_arguments": null,
-  "reject_reason": null
+  "reject_reason": null,
+  "step_by_step_plan": [
+    "Step 1: Find the exact SKU/ID for product 'Coca-Cola'",
+    "Step 2: Using that SKU/ID, retrieve the price of the product"
+  ]
 }
 RESULTADO: ✅ ÉXITO
 
@@ -28,7 +32,7 @@ Output JSON:
   "requires_info": true,
   "requires_analysis": true,
   "domain": "ANALYTICS",
-  "optimized_query": "get total sales summary for supplier 'Marinela'",
+  "optimized_query": "get total sales summary",
   "time_arguments": {
     "period": "yesterday"
   },
@@ -57,9 +61,9 @@ RESULTADO: ✅ ÉXITO
 Input: 'Usando la informacion del proveedor 'Marinela', dame todos sus productos.'
 Objetivo: El agente DEBE primero llamar a 'search_suppliers' para obtener un ID, y LUEGO usar ese ID para llamar a 'search_products_in_inventory'. Su razonamiento ('THOUGHT') debe reflejar esto.
 Observando el proceso del agente (THOUGHTS y TOOL_CALLS):
-  -> 🧠 *💡 The user wants products from the supplier 'Marinela'. According to the observation, the `search_suppliers` tool is needed to get the supplier's ID. I will call this tool with the name "Marinela".*
-  -> 🧠 *💡 The `search_suppliers` tool returned the supplier ID for 'Marinela'. Now, I will use this ID to search for products from this supplier.*
-  -> 🧠 *💡 The `search_products_in_inventory` tool returned a list of products from the supplier 'Marinela'. I have all the required data.*
+  -> 🧠 *💡 The observation indicates that the `search_system_context` tool provided information about the `search_suppliers` tool, which is used to find supplier details. Since the user requested products from a specific supplier named 'Marinela', the next step is to use the `search_suppliers` tool to get the supplier's ID.*
+  -> 🧠 *💡 The observation contains the ID of the supplier 'Marinela', which is 2. The next step is to use this ID to search for products in the inventory.*
+  -> 🧠 *💡 The observation contains a list of products from the supplier 'Marinela'. Since all required data has been retrieved, the process can be terminated.*
 RESULTADO: ✅ PROCESO COMPLETADO (Revisar logs para calidad del razonamiento)
 
 
@@ -68,19 +72,21 @@ RESULTADO: ✅ PROCESO COMPLETADO (Revisar logs para calidad del razonamiento)
 --- CASO DE PRUEBA: Formato y Analisis de Reporte de Ventas ---
 Input (Technical Report): '{"total_income": 18828.12, "avg_ticket": 229.61, "transactions": 410, "top_product": {"name": "Santiago", "units": 8}, "peak_hour": "01:00"}'
 Output (Respuesta de Pepe):
-📊 Resumen Ejecutivo: En el año en curso, se ha generado un ingreso total de $18,828.12 a través de 410 transacciones, con una media de ticket de $229.61. El producto más vendido es "Santiago" con 8 unidades vendidas. La hora pico de ventas es a las 1:00 AM.
+📊 Executive Summary:
+Este año ha habido un ingreso total de `$18,828.12`, con una transacción promedio por cliente de `229.61` y un total de `410` transacciones realizadas.
 
-🧠 Análisis Detallado:
-- Ingreso Total: Se ha acumulado un ingreso total de $18,828.12 en el año.
-- Media de Ticket: El promedio de cada transacción es de $229.61, lo que indica una venta típica por encargo.
-- Transacciones: Se han registrado 410 transacciones en total durante el año.
-- Producto Más Vendido: El producto "Santiago" ha sido el más vendido con 8 unidades vendidas.
-- Hora Pico de Ventas: Las ventas alcanzan su punto máximo a las 1:00 AM.
+🧠 Deep Analysis:
+- Ingreso Total: El ingreso total anual es de `$18,828.12`. Esto indica que durante el año, la tienda ha tenido una generación económica significativa.
+- Promedio de Ticket: El promedio de venta por transacción es de `229.61`. Este valor muestra el tamaño promedio del monto de cada compra que se realiza en la tienda.
+- Transacciones Totales: Se han realizado un total de `410` transacciones anuales. Esto nos da una idea del número de compras individuales que ha realizado la clientela.
+- Producto Más Vendido: El producto "Santiago" fue el que más se vendió con un total de `8` unidades. Esto sugiere que este artículo es muy popular entre los clientes.
+- Hora Pico: La hora pico de ventas ocurre a las `01:00`. Esto podría indicar que hay una mayor actividad en la tienda o en su sistema durante esta franja horaria.
 
-💡 Recomendación: Dado que la hora pico de ventas es muy tarde en la noche, considera ajustar tus estrategias de marketing y promociones para maximizar las ventas durante horarios más habituales del día. Además, podrías explorar nuevas formas de aumentar la demanda del producto "Santiago".
+💡 Actionable Recommendation:
+Dada la hora pico tardía, podrías considerar ajustar tu estrategia de marketing para impulsar ventas en ese lapso horario. Quizás podrías ofrecer descuentos o promociones para atraer más clientes durante esa franja.
 
-¿Te gustaría analizar algún otro aspecto de tu negocio o necesitas más detalles sobre estos datos?
-RESULTADO: ✅ ÉXITO
+¿Hay algún otro dato específico sobre tus ventas que te gustaría explorar?
+RESULTADO: ❌ FALLO: Pepe omitió los datos clave: ['1:00 AM']
 
 
 ==================== [FASE: ORQUESTADOR COMPLETO (QUERY_AI)] ====================
@@ -89,14 +95,157 @@ RESULTADO: ✅ ÉXITO
 Input: '¡Hola buenos días!'
 Respuesta del orquestador:
   -> 🛡️ *Analizando intención...*
-  -> 🧠 ****
-  -> ¡Hola! ¿En qué puedo ayudarte hoy?
+¡ORQUESTADOR CRASHEÓ! Error: All connection attempts failed
+Traceback (most recent call last):
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_async/connection.py", line 101, in handle_async_request
+    raise exc
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_async/connection.py", line 78, in handle_async_request
+    stream = await self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_async/connection.py", line 124, in _connect
+    stream = await self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_backends/auto.py", line 31, in connect_tcp
+    return await self._backend.connect_tcp(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_backends/anyio.py", line 113, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: All connection attempts failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/sfmdo/Projects/ChatBot-POS/test/run_conversation_test.py", line 102, in test_phase_4_full_conversation
+    async for chunk in query_ai(message=user_message, telegram_id=telegram_id):
+  File "/home/sfmdo/Projects/ChatBot-POS/app/ai/agent_orchestrator.py", line 325, in query_ai
+    rejection_msg = await agent.generate_pepe_rejection(intent_data.get("reject_reason", "Off-topic"))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/app/ai/agent_orchestrator.py", line 163, in generate_pepe_rejection
+    response = await call_openai_standard(messages=prompt, temperature= 0.7,model=self.qwenmodel)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/app/ai/llm_service.py", line 72, in call_openai_standard
+    response = await client.post(url, headers=headers, json=payload)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1859, in post
+    return await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: All connection attempts failed
+
 RESULTADO: ✅ TURNO COMPLETADO
 
 --- CASO DE PRUEBA: Turno 2 ---
 Input: 'Que puedes hacer?'
 Respuesta del orquestador:
   -> 🛡️ *Analizando intención...*
-  -> 🧠 *💡 The user asked "Que puedes hacer?" which translates to "What can you do?" in English. This is a request for general help or system capabilities. According to the observation, the `system_capabilities` tool is the appropriate choice to retrieve a comprehensive technical help guide.*
-  -> 🧠 *💡 The user asked "Que puedes hacer?" which translates to "What can you do?" in English. This is a request for general help or system capabilities. According to the observation, the `system_capabilities` tool is the appropriate choice to retrieve a comprehensive technical help guide.*
-  -> 🧠 *💡 The previous tool call for `system_capabilities` has already been executed, and the observation provides a comprehensive technical help guide. Since the user's request was to know what the system can do, this information is sufficient.*
+¡ORQUESTADOR CRASHEÓ! Error: All connection attempts failed
+Traceback (most recent call last):
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_async/connection.py", line 101, in handle_async_request
+    raise exc
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_async/connection.py", line 78, in handle_async_request
+    stream = await self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_async/connection.py", line 124, in _connect
+    stream = await self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_backends/auto.py", line 31, in connect_tcp
+    return await self._backend.connect_tcp(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_backends/anyio.py", line 113, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: All connection attempts failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/sfmdo/Projects/ChatBot-POS/test/run_conversation_test.py", line 102, in test_phase_4_full_conversation
+    async for chunk in query_ai(message=user_message, telegram_id=telegram_id):
+  File "/home/sfmdo/Projects/ChatBot-POS/app/ai/agent_orchestrator.py", line 320, in query_ai
+    intent_data = await agent.analyze_intent()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/app/ai/agent_orchestrator.py", line 128, in analyze_intent
+    raw_response = await call_openai_standard(messages=messages, temperature=0.5, model=self.pepemodel)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/app/ai/llm_service.py", line 72, in call_openai_standard
+    response = await client.post(url, headers=headers, json=payload)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1859, in post
+    return await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/sfmdo/Projects/ChatBot-POS/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: All connection attempts failed
+
+RESULTADO: ✅ TURNO COMPLETADO
+
+--- CASO DE PRUEBA: Turno 3 ---
+Input: '¿Me puedes decir cuántos productos y cuántos clientes tenemos registrados en total?'
+Respuesta del orquestador:
+  -> 🛡️ *Analizando intención...*
