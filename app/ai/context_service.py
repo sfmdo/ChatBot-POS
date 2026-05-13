@@ -110,7 +110,6 @@ Identify the user domain BEFORE calling any tool:
 f"""
 \n### SESSION DATA
 - Timestamp: {now}
-- User_ID: {telegram_id}
 """)
 
 def get_pepe_analyst_context(language: str, original_msg: str, gathered_data_from_phase_1: str, history: str = ""):
