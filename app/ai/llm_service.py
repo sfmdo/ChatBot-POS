@@ -1,4 +1,5 @@
 import os
+import asyncio
 import httpx
 from dotenv import load_dotenv
 load_dotenv()
@@ -66,8 +67,13 @@ async def call_openai_standard(
         payload["stop"] = stop_sequences
     
     async with httpx.AsyncClient(timeout=620.0, follow_redirects=True) as client:
-        response = await client.post(url, headers=headers, json=payload)
-        response.raise_for_status()
+        for attempt in range(3): # 3 intentos
+            try:
+                response = await client.post(url, headers=headers, json=payload)
+                response.raise_for_status()
         
-        data = response.json()
-        return data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                data = response.json()
+                return data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            except httpx.ConnectError:
+                if attempt == 2: raise
+                await asyncio.sleep(1) # Esperar un segundo y reintentar

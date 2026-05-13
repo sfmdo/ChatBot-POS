@@ -65,7 +65,9 @@ class ReActAgent:
                 "2. **DOMAIN**: Is this [PRODUCTS], [SUPPLIERS], [CUSTOMERS], [SYSTEM], [ANALYTICS] or [CONVERSATION]?\n"
                 "3. **SCHEMA CHECK**: Call 'search_system_context' to get the EXACT JSON keys for the tools you need. "
                 "DO NOT guess argument names (like 'query' or 'search'). Use what the documentation says.\n"
-                "4. **STRATEGY**: Define your path (e.g., Search Supplier -> Get ID -> Filter Products. Or for Analytics -> search tool -> Execute)."
+                "4. **STRATEGY**: Define your path (e.g., Search Supplier -> Get ID -> Filter Products. Or for Analytics -> search tool -> Execute).\n"
+                "5. TOOL PARAMETER CHECK: Before using `READY-TO-USE TIME ARGUMENTS`, check if the tool documentation actually accepts time parameters (start_date, period, etc.). "
+    "If the tool (like inventory_valuation) does NOT mention time arguments in the catalog, IGNORE the time arguments provided in the context.\n"
             )
         else: 
             instruction += (
@@ -221,7 +223,7 @@ class ReActAgent:
             print(f"\n{'='*20} [DEBUG STEP {step}] {'='*20}")
             prepared_msgs = await self._prepare_messages(step)
             stop_words = ["OBSERVATION:", "### OBSERVATION", "\nObservation:", "**OBSERVATION**"]
-            raw_content = await call_openai_standard(prepared_msgs, stop_sequences=stop_words, temperature=0.1,model=self.pepemodel)
+            raw_content = await call_openai_standard(prepared_msgs, stop_sequences=["}\n", "}\r\n", "}\t"], temperature=0.0,model=self.pepemodel)
             if not raw_content: break
             print(f"{raw_content}")
             thought = re.split(r"TOOL_CALL|FINAL\s*ANSWER", raw_content, flags=re.IGNORECASE)[0]
@@ -302,7 +304,7 @@ class ReActAgent:
             {"role": "user", "content": user_prompt}
         ]
         
-        response = await call_openai_standard(translation_prompt, temperature=0.7,model=self.pepemodel)
+        response = await call_openai_standard(translation_prompt, temperature=0.9,model=self.pepemodel)
         final_response = self._parse_response(response)
         
         if final_response["type"] == "final":
