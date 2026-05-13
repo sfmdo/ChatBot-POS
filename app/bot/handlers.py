@@ -1,4 +1,4 @@
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton,InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 from app.ai.agent_orchestrator import query_ai
@@ -113,4 +113,52 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
+async def tutorial_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Muestra ejemplos generales por categoría."""
+    tutorial_text = (
+        "💡 *Guía de Consulta Pepe*\n\n"
+        "Puedes preguntarme sobre estos temas de forma general:\n\n"
+        "💰 *Análisis de Ventas*\n"
+        "• Resúmenes de ingresos por periodos (día, semana, mes, año).\n"
+        "• Comparativas de rendimiento entre fechas.\n"
+        "• Análisis de horas pico y momentos de más flujo.\n"
+        "• Ranking de productos más y menos vendidos.\n\n"
+        "📦 *Gestión de Inventario*\n"
+        "• Consultas de precios y existencias actuales.\n"
+        "• Reportes de productos que están por agotarse.\n"
+        "• Valoración monetaria de lo que tienes en bodega.\n"
+        "• Identificación de productos que no se están vendiendo.\n\n"
+        "🤝 *Clientes y Créditos*\n"
+        "• Búsqueda de perfiles y hábitos de compra.\n"
+        "• Seguimiento de deudas y estados de cuenta.\n"
+        "• Listado de clientes frecuentes o por fechas especiales.\n\n"
+        "🚛 *Proveedores*\n"
+        "• Información fiscal y de contacto.\n"
+        "• Catálogo de productos por cada proveedor.\n\n"
+        "👉 *Escribe ahora:* _'¿Qué productos se están agotando?'_ o _'Resumen de este mes'_"
+    )
+
+    if update.message:
+        await update.message.reply_text(tutorial_text, parse_mode='Markdown')
+    elif update.callback_query:
+        await update.callback_query.message.reply_text(tutorial_text, parse_mode='Markdown')
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Explica qué es Pepe y cómo interactuar."""
+    help_text = (
+        "🧐 *¿Quién es Pepe?*\n"
+        "Soy tu Analista de Inteligencia de Negocios. No soy un chat común; tengo acceso directo a tu punto de venta para procesar datos y darte conclusiones útiles.\n\n"
+        "*Comandos Principales:*\n"
+        "🚀 /start - Iniciar o verificar tu acceso.\n"
+        "📖 /tutorial - Guía de cómo hacerme preguntas.\n"
+        "❓ /help - Ver este mensaje.\n\n"
+        "*Reglas de oro para hablar conmigo:*\n"
+        "1️⃣ *Habla natural:* No necesitas códigos, dime: _'¿Cómo fueron las ventas de ayer?'_\n"
+        "2️⃣ *Sé específico con el tiempo:* Usa frases como _'este mes'_, _'la semana pasada'_ o fechas exactas.\n"
+        "3️⃣ *Pide consejos:* Puedes preguntarme _'¿Qué me recomiendas hacer?'_ después de un reporte."
+    )
     
+    keyboard = [[InlineKeyboardButton("📖 Ver ejemplos generales", callback_data="show_tutorial")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(help_text, parse_mode='Markdown', reply_markup=reply_markup)

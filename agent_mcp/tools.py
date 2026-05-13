@@ -123,7 +123,7 @@ def setup_tools(mcp):
         if tax_rate_display: results = [p for p in results if tax_rate_display.lower() in p["tax_rate_display"].lower()]
         if updated_after: results = [p for p in results if p["updated_at"] >= updated_after]
 
-        return results[:20]
+        return results[:100]
 
     @mcp.tool()
     async def get_all_product_names() -> List[str]:
@@ -206,7 +206,7 @@ def setup_tools(mcp):
         if birth_month:
             results = [c for c in results if int(c["birth_date"].split("-")[1]) == birth_month]
 
-        return results[:20]
+        return results[:100]
 
     @mcp.tool()
     async def get_customer_points_history(customer_id: int) -> Any:
@@ -273,5 +273,5 @@ def setup_tools(mcp):
         if rfc: results = [s for s in results if rfc.upper() in s["rfc"].upper()]
         if tax_address: results = [s for s in results if tax_address.lower() in s["tax_address"].lower()]
 
-        return results[:15] 
+        return results[:100] 
 
