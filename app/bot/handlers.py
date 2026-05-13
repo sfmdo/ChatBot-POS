@@ -1,14 +1,13 @@
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
-from telegram.error import BadRequest, Forbidden, TelegramError
+from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 from app.ai.agent_orchestrator import query_ai
 import textwrap
 from app.models.database import (
-    save_message, 
-    get_user_context, 
     verify_and_register_user,  
     verify_active_access        
 )
+from split_text import split_long_message
 import logging
 
 logger = logging.getLogger(__name__)
@@ -57,16 +56,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
     user_text = update.message.text
 
-    # 1. Validación de acceso
     if not await verify_active_access(telegram_id):
         await update.message.reply_text("Tu sesión expiró o no te has verificado. Usa /start.")
         return
 
-    if not user_text:
-        await update.message.reply_text("No se ha recibido ningún texto.")
-        return
-
-    # 2. Mensaje inicial de "Pepe está pensando..."
     temp_message = await update.message.reply_text("⏳ Pepe está iniciando su análisis...")
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
 
@@ -74,54 +67,50 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     final_response = ""
 
     try:
-        # 3. Consumir el generador asíncrono de query_ai
         async for chunk in query_ai(user_text, telegram_id):
-            # Si el chunk empieza con 💭 o 🔍 es un estado intermedio
-            if chunk.startswith("💭") or chunk.startswith("🔍"):
-                # Solo editamos si el estado cambió para evitar spam a la API de Telegram
+            # 1. Manejo de estados intermedios (Pensamientos)
+            if chunk.startswith("🧠") or chunk.startswith("📋") or chunk.startswith("💡"):
                 if chunk != last_status:
                     try:
-                        await temp_message.edit_text(chunk, parse_mode='Markdown')
+                        # Cortamos el estado si por alguna razón fuera muy largo (raro en pensamientos)
+                        display_status = chunk[:4000]
+                        await temp_message.edit_text(display_status, parse_mode='Markdown')
                         last_status = chunk
                     except BadRequest as e:
                         if "not modified" not in str(e).lower():
                             logger.error(f"Error editando estado: {e}")
             else:
-                # Si no tiene esos prefijos, es la RESPUESTA FINAL
+                # Acumular o identificar la respuesta final
                 final_response = chunk
 
-        # 4. Enviar la respuesta final
+        # 2. Envío de la Respuesta Final (Proactivo)
         if final_response:
-            try:
-                # Intentamos editar el mensaje temporal con la respuesta final
-                await temp_message.edit_text(final_response, parse_mode='Markdown')
-            except BadRequest as e:
-                error_msg = str(e).lower()
-                
-                # Manejo de mensajes muy largos
-                if "message is too long" in error_msg:
-                    logger.warning("Respuesta final demasiado larga. Dividiendo...")
-                    fragments = split_long_message(final_response)
-                    # Editamos el primero
-                    await temp_message.edit_text(fragments[0], parse_mode='Markdown')
-                    # Enviamos el resto como mensajes nuevos
-                    for fragment in fragments[1:]:
+            fragments = split_long_message(final_response)
+            
+            for i, fragment in enumerate(fragments):
+                try:
+                    if i == 0:
+                        # El primer fragmento edita el mensaje de "Pepe está pensando..."
+                        await temp_message.edit_text(fragment, parse_mode='Markdown')
+                    else:
+                        # Los siguientes fragmentos se envían como mensajes nuevos
                         await update.message.reply_text(fragment, parse_mode='Markdown')
                 
-                elif "can't parse entities" in error_msg:
-                    # Si el Markdown falla, enviamos como texto plano
-                    await temp_message.edit_text(final_response)
-                
-                elif "message is not modified" in error_msg:
-                    pass
-                else:
-                    raise e
+                except BadRequest as e:
+                    # Si falla el Markdown (por fragmentos que cortaron etiquetas), reintentar sin Markdown
+                    if "can't parse entities" in str(e).lower():
+                        if i == 0:
+                            await temp_message.edit_text(fragment)
+                        else:
+                            await update.message.reply_text(fragment)
+                    else:
+                        logger.error(f"Error enviando fragmento {i}: {e}")
 
     except Exception as e:
         logger.error(f"Error crítico en el flujo de Pepe: {e}")
         try:
             await temp_message.edit_text("❌ Lo siento, Pepe tuvo un error interno al procesar tu solicitud.")
         except:
-            await update.message.reply_text("❌ Ocurrió un error crítico.")
+            pass
 
     
