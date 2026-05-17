@@ -27,6 +27,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "¡Hola! Soy tu Pepe, tu ayudante en los datos de tu negocio.\n\n"
         "Para poder ayudarte, primero necesito verificar que tu número "
         "esté autorizado en el sistema."
+        "\nUna vez registrado, puedes utilizar el comando /help para guiarte y ver los recursos disponibles"
     )
     
     await update.message.reply_text(welcome_message, reply_markup=keyboard)
@@ -68,11 +69,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         async for chunk in query_ai(user_text, telegram_id):
-            # 1. Manejo de estados intermedios (Pensamientos)
             if chunk.startswith("🧠") or chunk.startswith("📋") or chunk.startswith("💡"):
                 if chunk != last_status:
                     try:
-                        # Cortamos el estado si por alguna razón fuera muy largo (raro en pensamientos)
                         display_status = chunk[:4000]
                         await temp_message.edit_text(display_status, parse_mode='Markdown')
                         last_status = chunk
@@ -80,24 +79,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         if "not modified" not in str(e).lower():
                             logger.error(f"Error editando estado: {e}")
             else:
-                # Acumular o identificar la respuesta final
                 final_response = chunk
 
-        # 2. Envío de la Respuesta Final (Proactivo)
         if final_response:
             fragments = split_long_message(final_response)
             
             for i, fragment in enumerate(fragments):
                 try:
                     if i == 0:
-                        # El primer fragmento edita el mensaje de "Pepe está pensando..."
                         await temp_message.edit_text(fragment, parse_mode='Markdown')
                     else:
-                        # Los siguientes fragmentos se envían como mensajes nuevos
                         await update.message.reply_text(fragment, parse_mode='Markdown')
                 
                 except BadRequest as e:
-                    # Si falla el Markdown (por fragmentos que cortaron etiquetas), reintentar sin Markdown
+                    # Si falla el Markdown, reintentar sin Markdown
                     if "can't parse entities" in str(e).lower():
                         if i == 0:
                             await temp_message.edit_text(fragment)
@@ -109,14 +104,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error crítico en el flujo de Pepe: {e}")
         try:
-            await temp_message.edit_text("❌ Lo siento, Pepe tuvo un error interno al procesar tu solicitud.")
+            await temp_message.edit_text("Lo siento, Pepe tuvo un error interno al procesar tu solicitud.")
         except:
             pass
 
 async def tutorial_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Muestra ejemplos generales por categoría."""
     tutorial_text = (
-        "💡 *Guía de Consulta Pepe*\n\n"
+        "💡 *Guía de Consulta Pepe*\n"
+        "IMPORTANTE: Recuerda siempre especificar a que se refiere cada elemento de tu peticion, si es un producto, cliente, etc.\n\n"
         "Puedes preguntarme sobre estos temas de forma general:\n\n"
         "💰 *Análisis de Ventas*\n"
         "• Resúmenes de ingresos por periodos (día, semana, mes, año).\n"
@@ -146,7 +142,7 @@ async def tutorial_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Explica qué es Pepe y cómo interactuar."""
     help_text = (
-        "🧐 *¿Quién es Pepe?*\n"
+        "*¿Quién es Pepe?*\n"
         "Soy tu Analista de Inteligencia de Negocios. No soy un chat común; tengo acceso directo a tu punto de venta para procesar datos y darte conclusiones útiles.\n\n"
         "*Comandos Principales:*\n"
         "🚀 /start - Iniciar o verificar tu acceso.\n"

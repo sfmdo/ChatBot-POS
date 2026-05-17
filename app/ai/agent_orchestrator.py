@@ -101,7 +101,6 @@ class ReActAgent:
     async def analyze_intent(self) -> dict:
         """Evalúa la intención resolviendo el contexto y la inyecta al Gatekeeper."""
     
-        # 1. Recuperar historial y aplanarlo
         raw_history = await get_user_context(limit=2, telegram_id=self.telegram_id)
         history_text = "No history."
     
@@ -113,28 +112,20 @@ class ReActAgent:
                 history_lines.append(f"[{role}]: {content}")
             history_text = "\n".join(history_lines)
 
-        # ¡NUEVO! Guardamos el historial en la clase para que Pepe lo use después
         self.history_text = history_text
 
-        # 2. Obtener el prompt completamente formateado con los datos inyectados
         gatekeeper_prompt = get_gatekeeper_context(history=history_text, user_petition=self.original_message)
-    
-        # 3. Enviarlo al LLM (Qwen 2.5 Coder)
-        # Al ponerlo en "user", forzamos a que el modelo responda inmediatamente al comando.
+
         messages = [
             {"role": "user", "content": gatekeeper_prompt}
         ]
     
         raw_response = await call_openai_standard(messages=messages, temperature=0.5, model=self.pepemodel)
     
-        # 4. Extraer el JSON
-        # 4. Extraer el JSON
         json_match = re.search(r"\{.*\}", raw_response, re.DOTALL)
         if json_match:
             try:
                 intent_data = json.loads(json_match.group(0))
-            
-                # --- NUEVO FAILSAFE PROGRAMÁTICO ---
                 # Si el dominio es técnico, SIEMPRE requiere información, sin importar qué diga el LLM.
                 technical_domains = ["PRODUCTS", "SUPPLIERS", "CUSTOMERS", "ANALYTICS"]
                 if intent_data.get("domain") in technical_domains:
@@ -145,7 +136,6 @@ class ReActAgent:
             except json.JSONDecodeError:
                 pass
             
-        # Fallback de seguridad
         return {
             "is_valid": True, 
             "requires_info": True,
@@ -222,7 +212,6 @@ class ReActAgent:
         for step in range(1, self.max_steps + 1):
             print(f"\n{'='*20} [DEBUG STEP {step}] {'='*20}")
             prepared_msgs = await self._prepare_messages(step)
-            stop_words = ["OBSERVATION:", "### OBSERVATION", "\nObservation:", "**OBSERVATION**"]
             raw_content = await call_openai_standard(prepared_msgs, stop_sequences=["}\n", "}\r\n", "}\t"], temperature=0.0,model=self.pepemodel)
             if not raw_content: break
             print(f"{raw_content}")
@@ -316,17 +305,15 @@ async def query_ai(message: str, telegram_id: int) -> AsyncGenerator[str, None]:
     
     yield "🛡️ *Analizando intención...*"
     
-    # FASE 0: Gatekeeper con Contexto
     intent_data = await agent.analyze_intent()
     print(f"\n=== INTENT DATA ===\n{json.dumps(intent_data, indent=2)}")
     
-    # Si la petición es rechazada
     if not intent_data.get("is_valid", True):
         rejection_msg = await agent.generate_pepe_rejection(intent_data.get("reject_reason", "Off-topic"))
         yield rejection_msg
         return
 
-    # FASE 1: Inicializar Agente ReAct
+    #Inicializar Agente ReAct
     optimized_query = intent_data.get("optimized_query", message)
     domain = intent_data.get("domain", "SYSTEM") 
     time_args = intent_data.get("time_arguments") # <--- Obtenemos el diccionario JSON
@@ -334,9 +321,8 @@ async def query_ai(message: str, telegram_id: int) -> AsyncGenerator[str, None]:
     agent.requires_info = intent_data.get("requires_info", True)
     agent.requires_analysis = intent_data.get("requires_analysis", False)
 
-    # --- INYECCIÓN DEL TIEMPO AL AGENTE ---
+    # Inyeccion de tiempo
     if time_args:
-        # Lo convertimos a string JSON bonito para que el agente lo copie fácil
         time_str = f"\n**READY-TO-USE TIME ARGUMENTS**: {json.dumps(time_args)}\n(Merge these exact keys into your TOOL_CALL arguments if the tool requires time)."
     else:
         time_str = ""

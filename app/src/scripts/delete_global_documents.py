@@ -39,14 +39,13 @@ async def wipe_global_documents():
         logger.info(f"Deleting from RAG: {file_path.name}")
         
         try:
-            # 1. Delete from Vector Database
-            # delete_global_document uses os.path.basename internally for the source_name
+            # Delete from Vector Database
             result = await orchestrator.delete_global_document(str(file_path.resolve()))
             
             if result.get("status") == "success":
                 logger.info(f"Success: '{file_path.name}' removed from ChromaDB.")
 
-                # 2. Move physical file back to PENDING
+                # Move physical file back to PENDING
                 dest_path = PENDING_DIR / file_path.name
                 
                 # If it already exists in pending, unlink it to avoid move errors

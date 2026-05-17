@@ -60,10 +60,9 @@ async def test_phase_2_react_loop(logger, test_cases):
         agent = ReActAgent(telegram_id=999, message=case['message'])
         
         try:
-            # Solo nos interesa el proceso interno, no el resultado final
             logger.log("Observando el proceso del agente (THOUGHTS y TOOL_CALLS):")
             async for chunk in agent.run():
-                if "🧠" in chunk or "FINAL ANSWER" in chunk: # Filtramos para ver solo lo importante
+                if "🧠" in chunk or "FINAL ANSWER" in chunk: 
                     logger.log(f"  -> {chunk.strip()}")
             logger.log("RESULTADO: ✅ PROCESO COMPLETADO (Revisar logs para calidad del razonamiento)")
         except Exception as e:
@@ -104,12 +103,12 @@ async def test_phase_4_full_conversation(logger, test_cases, telegram_id):
             except Exception as e:
                 logger.log(f"¡ORQUESTADOR CRASHEÓ! Error: {e}")
                 import traceback
-                logger.log(traceback.format_exc()) # Esto te dará la traza completa
+                logger.log(traceback.format_exc()) 
             logger.log("RESULTADO: ✅ TURNO COMPLETADO")
         except Exception as e:
             logger.log(f"RESULTADO: ❌ ERROR CRÍTICO - {e}")
         
-        await asyncio.sleep(2) # Pausa para simular una conversación real
+        await asyncio.sleep(2) 
 
 
 async def main():

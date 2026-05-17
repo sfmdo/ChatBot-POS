@@ -51,37 +51,31 @@ class TestTimeTranslator(unittest.TestCase):
     # --- 3. EDGE CASES & TYPE HANDLING ---
     
     def test_default_reference_date(self):
-        # Asegura que funcione con el día de hoy si no se pasa ref_date
         req = {"period": "today"}
-        res = TimeTranslator.process_request(req) # No pasamos ref_date
+        res = TimeTranslator.process_request(req)
         today_str = date.today().isoformat()
         self.assertEqual(res["start_date"], today_str)
 
     def test_quantity_as_string_cast(self):
-        # A veces el LLM puede inyectar el número como string {"quantity": "5"}
-        # Dependiendo de cómo lo maneje tu código interno, esto valida que no explote
-        req = {"unit": "day", "quantity": 5} # idealmente casteas a int en el Translator
+        req = {"unit": "day", "quantity": 5} 
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertNotIn("error", res)
 
-    # --- 4. ERROR HANDLING TESTS (Corregidos) ---
+    # --- 4. ERROR HANDLING TESTS ---
 
     def test_invalid_absolute_period(self):
         req = {"period": "christmas"}
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertTrue("error" in res)
-        # El string ahora coincide con el ValueError real de tu clase
         self.assertIn("Unknown period", res["error"]) 
 
     def test_invalid_relative_unit(self):
         req = {"unit": "decade", "quantity": 1}
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertTrue("error" in res)
-        # El string ahora coincide con el ValueError real de tu clase
         self.assertIn("Unknown unit", res["error"])
 
     def test_missing_quantity_in_relative(self):
-        # Qué pasa si inyecta la unidad pero olvida la cantidad
         req = {"unit": "day"} 
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertTrue("error" in res)
@@ -91,7 +85,6 @@ class TestTimeTranslator(unittest.TestCase):
         req = {"range": "yesterday"} 
         res = TimeTranslator.process_request(req, self.ref_date)
         self.assertTrue("error" in res)
-        # El string ahora coincide con el return real de tu clase
         self.assertIn("Invalid format", res["error"])
 
 if __name__ == '__main__':
