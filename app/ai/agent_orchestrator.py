@@ -212,7 +212,7 @@ class ReActAgent:
         for step in range(1, self.max_steps + 1):
             print(f"\n{'='*20} [DEBUG STEP {step}] {'='*20}")
             prepared_msgs = await self._prepare_messages(step)
-            raw_content = await call_openai_standard(prepared_msgs, stop_sequences=["}\n", "}\r\n", "}\t"], temperature=0.0,model=self.pepemodel)
+            raw_content = await call_openai_standard(prepared_msgs, stop_sequences=["\n**OBSERVATION**", "\nObservation:", "\n**Observation**", "OBSERVATION:"], temperature=0.0,model=self.pepemodel)
             if not raw_content: break
             print(f"{raw_content}")
             thought = re.split(r"TOOL_CALL|FINAL\s*ANSWER", raw_content, flags=re.IGNORECASE)[0]
@@ -315,6 +315,7 @@ async def query_ai(message: str, telegram_id: int) -> AsyncGenerator[str, None]:
 
     #Inicializar Agente ReAct
     optimized_query = intent_data.get("optimized_query", message)
+    plan_str = "\n".join(intent_data.get("step_by_step_plan", []))
     domain = intent_data.get("domain", "SYSTEM") 
     time_args = intent_data.get("time_arguments") # <--- Obtenemos el diccionario JSON
     
@@ -328,8 +329,8 @@ async def query_ai(message: str, telegram_id: int) -> AsyncGenerator[str, None]:
         time_str = ""
     
     agent.original_message = (
-        f"User Request: '{message}'\n"
-        f"Contextual Target: '{optimized_query}'\n"
+        f"GOAL: {optimized_query}\n"
+        f"PLAN:\n{plan_str}\n"
         f"Pre-calculated Domain: [{domain}]"
         f"{time_str}"
     )

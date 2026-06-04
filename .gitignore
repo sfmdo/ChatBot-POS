@@ -23,6 +23,7 @@ RAG_Lite/resources/tokenizer/.gitkeep
 
 # Logs
 log.txt
+integration_test_log.txt
 *.log
 
 #ChromaDB
@@ -32,3 +33,5 @@ RAG_Lite/data/vector_db/*
 RAG_Lite/data/models/*
 RAG_Lite/test/data/*
 models_cache
+
+#test de conversacion

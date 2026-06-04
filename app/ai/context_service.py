@@ -1,6 +1,4 @@
-import json
 import datetime
-from agent_mcp.client import mcp_manager
 
 def get_dynamic_context(telegram_id: int):
    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -77,6 +75,10 @@ Identify the user domain BEFORE calling any tool:
 - **NEVER ASSUME IDs:** If the user provides a NAME, step 1 is ALWAYS to search for its ID.
 - **MANDATORY FLOW:** Thought -> Tool (ID Search) -> Observation -> Tool (Final Data) -> Answer.
 - **CHAINING:** Immediately use the retrieved ID in the next tool call.
+- **PLAN FIDELITY**: You MUST prioritize the product names/entities identified in the 'EXECUTION PLAN' over pronouns used in the user's message. (e.g., If the plan says "Check stock for CocaCola", use that name even if the user says "that" or "it").
+- **JSON INTEGRITY** You MUST always close the root object with double brackets '}}'.
+- **TERMINAL ERROR RULE**: If a tool returns a 404 or 400 error, DO NOT retry. Stop and explain to the user that the specific data requested is not available in the records.
+- PLAN OVER MESSAGE: You MUST use the specific entities (Product names, IDs, SKUs) mentioned in the 'EXECUTION PLAN'. Ignore ambiguous pronouns in the user's message like 'eso', 'este' or 'it' and replace them with the concrete data from the plan.
 
 ### CRITICAL SYNTAX RULES:
 1. **ONE JSON BLOCK ONLY**: Never output more than one TOOL_CALL.
@@ -216,6 +218,9 @@ If the user mentions a timeframe, you MUST return a `time_arguments` object base
 8. **QUANTITY VS TIME**: If the user says "last [number] sales/items", this is a LIMIT (quantity), not a timeframe. Set `time_arguments` to null and put the limit in the `optimized_query`.
 9. **CONTEXTUAL NOISE**: Ignore temporal greetings like "Good morning" or "To finish the day" when calculating `time_arguments`. Only use time for data filtering.
 10. **NOISE FILTERING (CRITICAL)**: Ignore conversational filler or temporal closings like "Para terminar el día", "Por cierto", "Hola", "Buenos días". Focus ONLY on the business action (e.g., "valoración de inventario").
+11. **AMBIGUITY RESOLUTION**: If the user is vague (e.g., "Lo más vendido"), assume [ANALYTICS] and default to a reasonable period (last 30 days) if not in history.
+12. **PEPE NAME FILTERING**: The user will often address the bot as "Pepe" (e.g., "Pepe, dame las ventas"). You MUST ignore the name "Pepe" and any polite verbs ("dame", "podrías buscar", "muéstrame") to extract the technical core.
+13. **QUERYS**:Queries asking for a decision, status, or opinion (e.g., 'are we doing okay?', 'should I order more?') ALWAYS require requires_analysis: true.
 ##ESPECIAL CASE
 **IMPORTANT**: If the information to analyze its in the context, put requires info in false, the system will give automaticly the history
 ### JSON OUTPUT SCHEMA:
@@ -263,6 +268,21 @@ User: "Velocidad de ventas de la Coca-Cola"
         "2. Using that SKU/ID, calculate sales velocity for the requested period"
     ]
 }}
+
+Current Request: "Pepe, sácame lo que se vendió ayer"
+{{"is_valid": true, "domain": "ANALYTICS", "requires_info": true, "requires_analysis": true, "step_by_step_plan": ["1. Retrieve the total sales summary for the specific date"], "optimized_query": "get sales summary", "time_arguments": {{"period": "yesterday"}}, "reject_reason": null}}
+
+Current Request: "Hola Pepe, ¿cómo va todo? ¿Quién es mi mejor cliente?"
+{{"is_valid": true, "domain": "ANALYTICS", "requires_info": true, "requires_analysis": true, "step_by_step_plan": ["1. Get customer ranking based on total spending", "2. Identify the top 1 customer"], "optimized_query": "get top customer ranking", "time_arguments": null, "reject_reason": null}}
+
+Current Request: "Pepe, dame el precio de la Sabrita"
+{{"is_valid": true, "domain": "PRODUCTS", "requires_info": true, "requires_analysis": false, "step_by_step_plan": ["1. Search for product 'Sabrita' in inventory", "2. Extract price and stock"], "optimized_query": "search product 'Sabrita'", "time_arguments": null, "reject_reason": null}}
+
+Current Request: "Sácame el reporte de lo de Marinela" (Ambiguous)
+{{"is_valid": true, "domain": "SUPPLIERS", "requires_info": true, "requires_analysis": true, "step_by_step_plan": ["1. Find supplier ID for 'Marinela'", "2. Retrieve sales/product summary for that supplier ID"], "optimized_query": "get supplier performance for 'Marinela'", "time_arguments": null, "reject_reason": null}}
+
+Current Request: "Pepe, ¿cómo se hace un pastel de chocolate?"
+{{"is_valid": false, "domain": "OFF_TOPIC", "requires_info": false, "requires_analysis": false, "step_by_step_plan": [], "optimized_query": null, "time_arguments": null, "reject_reason": "The user is asking for a recipe, which is unrelated to the POS system or business analysis."}}
 ---
 ### REAL INPUT TO ANALYZE:
 
