@@ -125,7 +125,7 @@ Calculates a range from a specific point in the past up to the reference date.
 ### 8 TOOL: get_customer_sales
 - **TOOL_NAME:** `get_customer_sales`
 - **DESCRIPTION:** Analyzes customer spending history.
-- **KEYWORDS:** customer history, shopper habits, client spending patterns.
+- **KEYWORDS:** customer history, shopper habits, client spending patterns, purchase history, customer search history
 - **⚠️ WARNING:** Choose ONLY ONE mode: `period` OR (`unit` + `quantity`).
 - **ARGUMENTS:** `{"customer_id": int, "period": string, "unit": "day"|"week"|"month"|"year", "quantity": int}`
 - **EXAMPLE_QUESTIONS:** 

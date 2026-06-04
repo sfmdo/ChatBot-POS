@@ -191,7 +191,7 @@ class ReActAgent:
         
         if re.search(r"FINAL\s*ANSWER", content, re.IGNORECASE):
             final_part = re.split(r"FINAL\s*ANSWER:?", content, flags=re.IGNORECASE)[-1]
-            final_text = final_part.replace("**", "").strip()
+            final_text = final_part.replace("**", "").strip().replace(":","").strip()
             return {"type": "final", "data": final_text}
         
         return {"type": "fallback", "data": content.strip()}
@@ -298,7 +298,7 @@ class ReActAgent:
         
         if final_response["type"] == "final":
             return final_response["data"]
-        return response.replace("**FINAL ANSWER**:", "").strip()
+        return response.replace("**FINAL ANSWER**:", "").strip().replace("FINAL RESPONSE:", "").strip()
     
 async def query_ai(message: str, telegram_id: int) -> AsyncGenerator[str, None]:
     agent = ReActAgent(telegram_id, message)

@@ -54,7 +54,7 @@ Identify the user domain BEFORE calling any tool:
 1. `search_suppliers(name="Name")` -> Get `id`.
 2. `search_products_in_inventory(supplier_id=id)` -> Product list.
 
-## 2. CUSTOMER (SALES / DEBT / POINTS)
+## 2. CUSTOMER (SALES / DEBT / POINTS / PURCHASE HISTORY(SALES))
 1. `search_customers(name="Name")` -> Get `id`.
 2. Execute as needed:
    - `get_customer_sales(customer_id=id, ...)`
