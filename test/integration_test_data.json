@@ -1,132 +1,50 @@
 {
     "telegram_id": 6596706525,
-    "phase_1_gatekeeper_tests":[
+    "phase_0_router_tests": [
         {
-            "name": "Busqueda Simple de Producto",
-            "message": "Precio de la Coca-Cola",
-            "expected": { "domain": "PRODUCTS", "requires_info": true }
+            "name": "Ruta de Datos Directa",
+            "message": "Pepe, dime el stock de [PRODUCTO]",
+            "expected": { "route": "DATA_FETCH", "is_valid": true }
         },
         {
-            "name": "Consulta Analitica con Tiempo",
-            "message": "Cual fue el resumen de ventas de ayer?",
-            "expected": { "domain": "ANALYTICS", "requires_analysis": true, "time_args_exist": true }
+            "name": "Ruta de Drill Down (Seguimiento)",
+            "message": "¿Y por qué vendí tan poquito de eso?",
+            "history_simulated": "[Pepe]: El reporte de ventas de [PRODUCTO] muestra $100.",
+            "expected": { "route": "DRILL_DOWN", "relevance": "Follow-up" }
         },
         {
-            "name": "Rechazo por Fuera de Tema",
-            "message": "dame una receta de cocina",
-            "expected": { "is_valid": false, "domain": "OFF_TOPIC" }
+            "name": "Ruta de Rechazo (Off-topic)",
+            "message": "¿Cómo se hace una pizza?",
+            "expected": { "route": "REJECTION", "is_valid": false }
         },
         {
-            "name": "Consulta Ambigua de Existencias",
-            "message": "Pepe, fíjate si andamos bien de Sabritas o si ya hay que pedir.",
+            "name": "Ruta de Chat (Cortesía)",
+            "message": "Muchas gracias Pepe, eres un crack.",
+            "expected": { "route": "CHAT" }
+        }
+    ],
+    "phase_0_5_architect_tests": [
+        {
+            "name": "Planificación de Ventas con Tiempo",
+            "clean_intent": "get sales summary for yesterday",
             "expected": { 
-            "domain": "PRODUCTS", 
-            "requires_info": true,
-            "requires_analysis": true 
-        },
-        "description": "El usuario no pide un SKU, pide 'Sabritas' (marca/proveedor) y una decisión ('si hay que pedir'). El plan debe ser: 1. Buscar proveedor/marca 'Sabritas', 2. Listar productos con stock bajo."
+                "domain": "ANALYTICS", 
+                "time_arguments": { "period": "yesterday" } 
+            }
         },
         {
-            "name": "Preocupación por flujo de caja",
-            "message": "Oye, ¿cómo va el dinero hoy? Siento que ha estado flojo.",
+            "name": "Planificación de ID + Detalles",
+            "clean_intent": "get RFC and items for [PROVEEDOR]",
             "expected": { 
-            "domain": "ANALYTICS", 
-            "requires_analysis": true,
-            "time_args_exist": true 
-        },
-        "description": "Debe inferir que 'dinero hoy' significa un Sales Summary del periodo 'today' y compararlo o analizarlo."
+                "domain": "SUPPLIERS", 
+                "steps_min": 2 
+            }
         }
     ],
-    "phase_2_react_loop_tests": [
-        {
-            "name": "Encadenamiento de Herramientas (Proveedor -> Productos)",
-            "message": "Usando la informacion del proveedor 'Marinela', dame todos sus productos.",
-            "description": "El agente DEBE primero llamar a 'search_suppliers' para obtener un ID, y LUEGO usar ese ID para llamar a 'search_products_in_inventory'. Su razonamiento ('THOUGHT') debe reflejar esto."
-        }
-    ],
-    "phase_3_pepe_analyst_tests": [
-        {
-            "name": "Formato y Analisis de Reporte de Ventas",
-            "original_message": "Resumen de ventas anual",
-            "technical_report": "{\"total_income\": 18828.12, \"avg_ticket\": 229.61, \"transactions\": 410, \"top_product\": {\"name\": \"Santiago\", \"units\": 8}, \"peak_hour\": \"01:00\"}",
-            "expected_keywords": ["18,828.12", "Santiago", "1:00 AM", "promedio"]
-        },
-        {
-            "name": "Análisis de ticket alto vs volumen bajo",
-            "original_message": "¿Cómo estuvo el mes pasado?",
-            "technical_report": "{\"total_revenue\": 50000, \"total_tickets\": 10, \"avg_ticket\": 5000, \"top_product\": \"Refresco 2L\", \"peak_hour\": \"22:00\"}",
-            "expected_keywords": ["pocos clientes", "compras grandes", "promedio", "10:00 PM"]
-        }
-    ],
-    "phase_4_full_conversation_test": [
-        { 
-            "turn": 1, 
-            "user_message": "¡Hola buenos días!" 
-        },
-        { 
-            "turn": 2, 
-            "user_message": "Que puedes hacer?" 
-        },
-        { 
-            "turn": 3, 
-            "user_message": "¿Me puedes decir cuántos productos y cuántos clientes tenemos registrados en total?" 
-        },
-        { 
-            "turn": 4, 
-            "user_message": "Busca el RFC del proveedor 'Pepsico' y luego dame la lista de todos los productos que nos surte." 
-        },
-        { 
-            "turn": 5, 
-            "user_message": "¿Cuál es la velocidad de ventas y los días de stock del primer producto de esa lista?" 
-        },
-        { 
-            "turn": 6, 
-            "user_message": "Cambiando de tema, ¿cuál fue el top 5 de productos más vendidos de este trimestre?" 
-        },
-        { 
-            "turn": 7, 
-            "user_message": "De ese top, ¿cuál fue la contribución en ingresos del producto número uno durante el mes pasado?" 
-        },
-        { 
-            "turn": 8, 
-            "user_message": "Busca a la cliente 'Maria Fernandez' y revisa su historial de crédito para ver si nos debe dinero." 
-        },
-        { 
-            "turn": 9, 
-            "user_message": "Ahora búscame las últimas 3 ventas que se quedaron en estado PENDING." 
-        },
-        { 
-            "turn": 10, 
-            "user_message": "Dame el detalle completo de los artículos del primer ticket de esa lista." 
-        },
-        { 
-            "turn": 11, 
-            "user_message": "Para terminar el día, calcúlame la valoración total de todo nuestro inventario actual." 
-        },
-        { 
-            "turn":12, 
-            "user_message": "Hola Pepe, ando con pendiente... ¿quién es el cliente que más me debe dinero ahorita?" ,
-            "description": "Debe buscar en clientes, filtrar por deuda y ordenar."
-        },
-        { 
-            "turn":13, 
-            "user_message": "Ay no, ese Nestor siempre se tarda. Oye, y de lo que vendimos ayer, ¿qué fue lo que más salió?" ,
-            "description": "Cambio de contexto: de CRM a Analytics, manteniendo la noción de 'ayer'."
-        },
-        { 
-            "turn": 14, 
-            "user_message": "¿Y me queda mucho de eso en la bodega?",
-            "description": "Referencia ambigua: 'eso' se refiere al producto más vendido del turno 2. Debe buscar stock de ese producto específico."
-        },
-        { 
-            "turn": 15, 
-            "user_message": "Perfecto. Por cierto Pepe, ¿tú sabes cómo se arregla una fuga de agua en el baño?",
-            "description": "Prueba de Off-Topic: Debe rechazar amablemente y reenfocar al negocio."
-        },
-        { 
-            "turn": 16, 
-            "user_message": "Jajaja bueno, está bien. Para terminar, dime cuánto dinero tengo parado en total en la tienda.",
-            "description": "Debe entender que 'dinero parado' es la Valoración de Inventario total."
-        }
+    "phase_4_full_flow_sequence": [
+        { "turn": 1, "user_message": "Hola Pepe", "expected_route": "CHAT" },
+        { "turn": 2, "user_message": "¿Cuánto vendí ayer?", "expected_route": "DATA_FETCH" },
+        { "turn": 3, "user_message": "¿Y de eso quién fue el mejor cliente?", "expected_route": "DRILL_DOWN" },
+        { "turn": 4, "user_message": "¿Cómo arreglo mi coche?", "expected_route": "REJECTION" }
     ]
 }

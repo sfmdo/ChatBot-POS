@@ -39,7 +39,7 @@ async def call_openai_standard(
     print(f"\nModel = {model}\n")
 
     if model == 1:
-        url = f"{BASE_URL1}/v1/chat/completions"
+        url = f"{BASE_URL2}/v1/chat/completions"
     elif model == 2:
         url = f"{BASE_URL2}/v1/chat/completions"
     else:

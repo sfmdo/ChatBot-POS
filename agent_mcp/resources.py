@@ -118,20 +118,3 @@ I understand natural language for time-based reports:
 
 ---
 """
-    @mcp.tool
-    async def system_greeting_protocol():
-        """
-        Returns a professional greeting and redirects the user to POS tasks.
-        """
-        return """
-    **POS SYSTEM ONLINE**
-    Hello. I am your Enterprise Data Assistant. I am optimized for professional POS operations only.
-
-    I can assist you with:
-    - **📦 Inventory:** Stock, prices, and catalog.
-    - **📊 Sales:** Revenue reports, rankings, and analytics.
-    - **👤 Customers:** Debt, loyalty points, and profiles.
-    - **🤝 Suppliers:** Contact info and vendor details.
-
-    Please provide a specific data request or ask for 'help' to see more details.
-        """

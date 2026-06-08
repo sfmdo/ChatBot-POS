@@ -30,14 +30,14 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "\nUna vez registrado, puedes utilizar el comando /help para guiarte y ver los recursos disponibles"
     )
     
-    await update.message.reply_text(welcome_message, reply_markup=keyboard)
+    await update.message.reply_text(welcome_message, reply_markup=keyboard) # type: ignore
 
 async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """This handler receives the Telegram phone number"""
-    telegram_id = update.effective_user.id
-    contact = update.message.contact
+    telegram_id = update.effective_user.id # type: ignore
+    contact = update.message.contact # type: ignore
 
-    user_phone = contact.phone_number.replace("+", "").strip()
+    user_phone = contact.phone_number.replace("+", "").strip() # type: ignore
 
     allowed_phones = await get_authorized_phones()
 
@@ -45,30 +45,30 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_phone in cleaned_phones:
         await verify_and_register_user(telegram_id, user_phone)
-        await update.message.reply_text("Acceso concedido, Ya puedes hacerme consultas por 24 horas.")
+        await update.message.reply_text("Acceso concedido, Ya puedes hacerme consultas por 24 horas.") # type: ignore
     else:
-        await update.message.reply_text("Tu número no tiene permisos en el sistema. Contacta a tu administrador.")
+        await update.message.reply_text("Tu número no tiene permisos en el sistema. Contacta a tu administrador.") # type: ignore
 
 
 def split_long_message(text, limit=4000):
     return textwrap.wrap(text, limit, break_long_words=False, replace_whitespace=False)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    telegram_id = update.message.from_user.id
-    user_text = update.message.text
+    telegram_id = update.message.from_user.id # type: ignore
+    user_text = update.message.text # type: ignore
 
     if not await verify_active_access(telegram_id):
-        await update.message.reply_text("Tu sesión expiró o no te has verificado. Usa /start.")
+        await update.message.reply_text("Tu sesión expiró o no te has verificado. Usa /start.") # type: ignore
         return
 
-    temp_message = await update.message.reply_text("⏳ Pepe está iniciando su análisis...")
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
+    temp_message = await update.message.reply_text("⏳ Pepe está iniciando su análisis...") # type: ignore
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing') # type: ignore
 
     last_status = ""
     final_response = ""
 
     try:
-        async for chunk in query_ai(user_text, telegram_id):
+        async for chunk in query_ai(user_text, telegram_id): # type: ignore
             if chunk.startswith("🧠") or chunk.startswith("📋") or chunk.startswith("💡"):
                 if chunk != last_status:
                     try:
@@ -89,15 +89,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if i == 0:
                         await temp_message.edit_text(fragment, parse_mode='Markdown')
                     else:
-                        await update.message.reply_text(fragment, parse_mode='Markdown')
+                        await update.message.reply_text(fragment, parse_mode='Markdown') # type: ignore
                 
                 except BadRequest as e:
-                    # Si falla el Markdown, reintentar sin Markdown
+
                     if "can't parse entities" in str(e).lower():
                         if i == 0:
                             await temp_message.edit_text(fragment)
                         else:
-                            await update.message.reply_text(fragment)
+                            await update.message.reply_text(fragment) # type: ignore
                     else:
                         logger.error(f"Error enviando fragmento {i}: {e}")
 
@@ -137,7 +137,7 @@ async def tutorial_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(tutorial_text, parse_mode='Markdown')
     elif update.callback_query:
-        await update.callback_query.message.reply_text(tutorial_text, parse_mode='Markdown')
+        await update.callback_query.message.reply_text(tutorial_text, parse_mode='Markdown') # type: ignore
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Explica qué es Pepe y cómo interactuar."""
@@ -157,4 +157,4 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("📖 Ver ejemplos generales", callback_data="show_tutorial")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(help_text, parse_mode='Markdown', reply_markup=reply_markup)
+    await update.message.reply_text(help_text, parse_mode='Markdown', reply_markup=reply_markup) # type: ignore

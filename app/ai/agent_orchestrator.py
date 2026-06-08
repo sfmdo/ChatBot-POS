@@ -1,339 +1,148 @@
 import json
 import re
-from typing import AsyncGenerator
-from .context_service import get_dynamic_context, get_pepe_analyst_context, get_gatekeeper_context
+import asyncio
+from typing import AsyncGenerator, Dict, Any
 from .llm_service import call_openai_standard
-from .storage_service import finalize_storage
 from app.models.database import get_user_context
-from agent_mcp.client import mcp_manager
-from typing import AsyncGenerator, Dict, List, Any
-from mcp.types import TextContent
+from app.ai.context_service import get_gatekeeper_context
 
-class ReActAgent:
-    def __init__(self, telegram_id: int, message: str, max_steps: int = 10):
+from app.ai.agent_routes.ai_data_fetch import DataFetchReActAgent 
+from app.ai.agent_routes.ai_rejection import AgentRejecter
+from app.ai.agent_routes.ai_chat import AgentChat
+from app.ai.agent_routes.ai_drill_down import AgentDrillDown
+
+class PepeOrchestrator:
+    def __init__(self, telegram_id: int, message: str):
         self.telegram_id = telegram_id
-        self.original_message = message
-        self.max_steps = max_steps
-        self.detected_lang = "Spanish"
-        self.last_action = ""
-        self.messages = []
-        self.requires_info = True
-        self.history_text = "No Past history"
-        self.requires_analysis = False
+        self.raw_message = message
         self.pepemodel = 1
-        self.qwenmodel = 2
+        self.detected_lang = "Spanish"
 
-    async def initialize(self):
-        """Prepara el contexto inicial con la jerarquía correcta."""
-        identity_context = get_dynamic_context(self.telegram_id)
-        self.messages = [
-            {"role": "system", "content": identity_context},
-            {"role": "user", "content": f"**USER PETITION**: {self.original_message}"}
-        ]
-
-    def _build_step_nudge(self, step: int) -> str:
-        instruction = f"\n\n--- [KERNEL STEP {step}/{self.max_steps}] ---\n"
-        
-        if not self.requires_info and self.requires_analysis:
-            instruction += (
-                "**PHASE 1: CONTEXTUAL ANALYSIS BYPASS**\n"
-                "The Gatekeeper determined this request does NOT require fetching new database info, but it DOES require analyzing past context.\n"
-                "1. DO NOT call any database or inventory tools.\n"
-                "2. You may ONLY call the 'fetch_chat_history' tool (Limit: 1 time) to retrieve the formatted history.\n"
-                "3. Analyze the history and immediately output EXACTLY -> FINAL ANSWER: [Your detailed summary or analysis of the retrieved context]."
-            )
-        
-        if not self.requires_info:
-            instruction += (
-                "**PHASE 1: CONVERSATIONAL BYPASS**\n"
-                "The Gatekeeper determined this request does NOT require fetching database info.\n"
-                "DO NOT call any tools. DO NOT use search_system_context.\n"
-                "Immediately output EXACTLY -> FINAL ANSWER: Empty Technical Report. Pure conversational intent."
-            )
-        
-        elif step == self.max_steps:
-            instruction += (
-                "**CRITICAL: LAST ATTEMPT.** Summarize all partial data found. "
-                "If a tool failed, explain technically why (e.g., 'Validation Error in argument X'). "
-                "Output FINAL ANSWER with the current state of knowledge."
-            )
-        elif step == 1:
-            instruction += (
-                "The only tool you need to call in this step is the system context tool.\n"
-                "**PHASE 1: CONTEXTUAL ANALYSIS & ROADMAP**\n"
-                "1. **PAST CONTEXT**: Check if the User, ID, or SKU was mentioned in previous messages.\n"
-                "2. **DOMAIN**: Is this [PRODUCTS], [SUPPLIERS], [CUSTOMERS], [SYSTEM], [ANALYTICS] or [CONVERSATION]?\n"
-                "3. **SCHEMA CHECK**: Call 'search_system_context' to get the EXACT JSON keys for the tools you need. "
-                "DO NOT guess argument names (like 'query' or 'search'). Use what the documentation says.\n"
-                "4. **STRATEGY**: Define your path (e.g., Search Supplier -> Get ID -> Filter Products. Or for Analytics -> search tool -> Execute).\n"
-                "5. TOOL PARAMETER CHECK: Before using `READY-TO-USE TIME ARGUMENTS`, check if the tool documentation actually accepts time parameters (start_date, period, etc.). "
-    "If the tool (like inventory_valuation) does NOT mention time arguments in the catalog, IGNORE the time arguments provided in the context.\n"
-            )
-        else: 
-            instruction += (
-        "**PHASE N: EXECUTION & ADAPTATION**\n"
-        "1. **ANALYZE LAST OBSERVATION**: Briefly assess the result from the previous tool call.\n"
-        "2. **IMMEDIATE ACTION**: Based on your analysis, you MUST either:\n"
-        "   a) **Call the NEXT logical tool** to continue your plan.\n"
-        "   b) **Output FINAL ANSWER** if you have all the data.\n"
-        "**CRITICAL**: DO NOT stay in a thinking loop. Analyze, then ACT. Your goal is to progress, not to perfect the plan indefinitely.\n"
-        "**Format**: THOUGHT: (Brief analysis and next action) -> TOOL_CALL: {JSON} OR FINAL ANSWER: (Full data)."
-        )
-        
-        return f"{instruction}\nSystem Language: English (Technical)\n---"
-
-    async def _prepare_messages(self, step: int) -> List[Dict[str, str]]:
+    async def _get_clean_history(self) -> str:
         """
-        Crea una versión de la conversación para enviar al LLM.
-        Añade instrucciones temporales que NO se guardan en el historial permanente.
+        Obtiene los últimos 2 logs de negocio de la base de datos.
+        Este historial ya viene filtrado y limpio (sin basura de chat).
         """
-        instrumented_msgs = [m.copy() for m in self.messages]
-        
-        nudge = self._build_step_nudge(step)
-        
-        if step == 1:
-            instrumented_msgs.append({"role": "system", "content": f"{nudge}"})
-        else:
-            instrumented_msgs.append({"role": "system", "content": nudge})
-            
-        return instrumented_msgs
-
-    async def analyze_intent(self) -> dict:
-        """Evalúa la intención resolviendo el contexto y la inyecta al Gatekeeper."""
-    
         raw_history = await get_user_context(limit=2, telegram_id=self.telegram_id)
-        history_text = "No history."
-    
-        if raw_history and isinstance(raw_history, list):
-            history_lines = []
-            for msg in raw_history:
-                role = "Bot" if msg.get("role") == "assistant" else "User"
-                content = msg.get("content", "").replace("\n", " ")
-                history_lines.append(f"[{role}]: {content}")
-            history_text = "\n".join(history_lines)
-
-        self.history_text = history_text
-
-        gatekeeper_prompt = get_gatekeeper_context(history=history_text, user_petition=self.original_message)
-
-        messages = [
-            {"role": "user", "content": gatekeeper_prompt}
-        ]
-    
-        raw_response = await call_openai_standard(messages=messages, temperature=0.5, model=self.pepemodel)
-    
-        json_match = re.search(r"\{.*\}", raw_response, re.DOTALL)
-        if json_match:
-            try:
-                intent_data = json.loads(json_match.group(0))
-                # Si el dominio es técnico, SIEMPRE requiere información, sin importar qué diga el LLM.
-                technical_domains = ["PRODUCTS", "SUPPLIERS", "CUSTOMERS", "ANALYTICS"]
-                if intent_data.get("domain") in technical_domains:
-                    intent_data["requires_info"] = True
-                # -----------------------------------
-            
-                return intent_data
-            except json.JSONDecodeError:
-                pass
-            
-        return {
-            "is_valid": True, 
-            "requires_info": True,
-            "domain": "SYSTEM", 
-            "optimized_query": "No se pudo entender la peticion del usuario", 
-            "reject_reason": None
-        }
-
-    async def generate_pepe_rejection(self,reject_reason: str) -> str:
-        """Genera una respuesta de Pepe cuando la petición es rechazada."""
-        prompt = [
-            {"role": "system", "content": get_pepe_analyst_context(language=self.detected_lang,original_msg=reject_reason,gathered_data_from_phase_1="NO DATA")},
-            {"role": "user", "content": "El usuario preguntó algo fuera de lugar. Como Pepe, dile amablemente que solo puedes ayudarle con temas del negocio, ventas, inventario, etc. Usa un emoji. FINAL ANSWER:"}
-        ]
-        response = await call_openai_standard(messages=prompt, temperature= 0.7,model=self.pepemodel)
-    
-        final_text = re.split(r"FINAL\s*ANSWER:?", response, flags=re.IGNORECASE)[-1].strip()
-        await finalize_storage(self.telegram_id, self.original_message, final_text)
-        return final_text
-
-    async def _execute_tool(self, name: str, args: Dict[str, Any]) -> str:
-        """Maneja la ejecución de herramientas a través de MCP."""
-        if name in ["fetch_chat_history", "search_system_context"]:
-            args["telegram_id"] = self.telegram_id
-
-        current_action = f"{name}-{json.dumps(args, sort_keys=True)}"
-        if current_action == self.last_action:
-            return "SYSTEM: You already called this tool with these args. Use the previous OBSERVATION."
+        if not raw_history:
+            return "No previous business logs."
         
-        self.last_action = current_action
+        history_lines = []
+        for msg in raw_history:
+            role = "Pepe" if msg.get("role") == "assistant" else "User"
+            content = msg.get("content", "").replace("\n", " ")
+            history_lines.append(f"[{role}]: {content}")
+        return "\n".join(history_lines)
 
-        if not mcp_manager.session:
-            return "Error: MCP session is not active."
+    async def route_request(self) -> AsyncGenerator[str, None]:
+        """
+        FASE 0: MASTER ROUTER
+        Punto de entrada lógico que decide el destino de la petición.
+        """
+        yield "🛡️ *Analizando petición...*"
+    
+        history = await self._get_clean_history()
+    
+        router_prompt = get_gatekeeper_context(history=history, user_petition=self.raw_message)
+        response = await call_openai_standard([{"role": "user", "content": router_prompt}], model=self.pepemodel)
+    
+        # 3. Extracción de lógica del JSON
+        json_match = re.search(r"\{.*\}", response, re.DOTALL) # type: ignore
+        if not json_match:
+            yield "❌ No pude determinar la intención. ¿Podrías reformular tu pregunta?"
+            return
 
         try:
-            result = await mcp_manager.session.call_tool(name, arguments=args)
-            obs = "\n".join([c.text for c in result.content if isinstance(c, TextContent)])
-            return obs[:30000] if len(obs) > 30000 else obs
+            route_data = json.loads(json_match.group(0))
+        
+            route = route_data.get("route", "CHAT")
+            clean_intent = route_data.get("clean_intent", self.raw_message)
+            log_summary = route_data.get("log_summary", "")
+            intent_description = route_data.get("intent_description", "")
+            is_valid = route_data.get("is_valid", True)
+            reject_reason = route_data.get("reject_reason", "Topic unrelated to POS/Business.")
+            self.detected_lang = route_data.get("language", "Spanish")
+        
+            print(f"DEBUG: ROUTE -> {route} | LANG -> {self.detected_lang}")
+
+            if route == "REJECTION" or not is_valid:
+                async for chunk in self._handle_rejection(reason=reject_reason):
+                    yield chunk
+
+            elif route == "CHAT":
+                async for chunk in self._handle_chat():
+                    yield chunk
+
+            elif route == "DRILL_DOWN":
+                async for chunk in self._handle_drill_down(
+                    intent_description=intent_description, 
+                    history=history
+                ):
+                    yield chunk
+
+            elif route == "DATA_FETCH":
+                async for chunk in self._handle_data_fetch(
+                    clean_intent=clean_intent, 
+                    log_summary=log_summary
+                ):
+                    yield chunk
+
         except Exception as e:
-            return f"Error executing tool: {str(e)}"
+            print(f"Error Crítico en Orchestrator: {str(e)}")
+            yield "❌ Lo siento, tuve un problema interno al organizar tu respuesta técnica."
 
-    def _parse_response(self, content: str) -> Dict[str, Any]:
-        """Extrae la intención (Tool o Final Answer) de la respuesta del LLM."""
-        if re.search(r"TOOL_CALL", content, re.IGNORECASE):
-            json_match = re.search(r"\{.*\}", content, re.DOTALL)
-            if json_match:
-                raw_json_string = json_match.group(0)
-                print(f"\n--- RAW JSON FROM LLM ---\n{raw_json_string}\n-------------------------") # Añade esto
-                try:
-                    return {"type": "tool", "data": json.loads(raw_json_string)}
-                except:
-                    return {"type": "error", "data": "Invalid JSON format."}
-        
-        if re.search(r"FINAL\s*ANSWER", content, re.IGNORECASE):
-            final_part = re.split(r"FINAL\s*ANSWER:?", content, flags=re.IGNORECASE)[-1]
-            final_text = final_part.replace("**", "").strip().replace(":","").strip()
-            return {"type": "final", "data": final_text}
-        
-        return {"type": "fallback", "data": content.strip()}
+    async def _handle_rejection(self, reason: str) -> AsyncGenerator[str, None]:
+        """Maneja peticiones fuera de contexto."""
+        agent = AgentRejecter(
+            telegram_id=self.telegram_id,
+            user_petition=self.raw_message,
+            reject_reason=reason,
+            language=self.detected_lang
+        )
+        async for chunk in agent.run():
+            yield chunk 
 
-    def _clean_thought_for_user(self, thought: str) -> str:
-        """Clean the text for the Telegram User"""
-        text = thought.replace("PLANNING:", "📋").replace("THOUGHT:", "💡")
-        text = text.replace("Status Update:", "").replace("Action Analysis:", "")
-        text = text.replace("Domain Identification:", "").replace("Entity Status:", "")
-        
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
-        return "\n".join(lines)
-    
-    async def run(self) -> AsyncGenerator[str, None]:
-        """Ciclo principal de ejecución del agente."""
-        await self.initialize()
+    async def _handle_chat(self) -> AsyncGenerator[str, None]:
+        """Maneja saludos, agradecimientos y despedidas."""
+        agent = AgentChat(
+            telegram_id=self.telegram_id,
+            user_message=self.raw_message,
+            language=self.detected_lang
+        )
+        async for chunk in agent.run():
+            yield chunk
 
-        for step in range(1, self.max_steps + 1):
-            print(f"\n{'='*20} [DEBUG STEP {step}] {'='*20}")
-            prepared_msgs = await self._prepare_messages(step)
-            raw_content = await call_openai_standard(prepared_msgs, stop_sequences=["\n**OBSERVATION**", "\nObservation:", "\n**Observation**", "OBSERVATION:"], temperature=0.0,model=self.pepemodel)
-            if not raw_content: break
-            print(f"{raw_content}")
-            thought = re.split(r"TOOL_CALL|FINAL\s*ANSWER", raw_content, flags=re.IGNORECASE)[0]
-            
-            display_thought = self._clean_thought_for_user(thought)
-            
-            if display_thought:
-                yield f"🧠 *{display_thought}*"
+    async def _handle_drill_down(self, intent_description: str, history: str) -> AsyncGenerator[str, None]:
+        """Maneja análisis profundos basados únicamente en el historial."""
+        yield "🧠 *Analizando datos previos...*"
+        agent = AgentDrillDown(
+            telegram_id=self.telegram_id,
+            intent_description=intent_description,
+            history=history,
+            language=self.detected_lang
+        )
+        async for chunk in agent.run():
+            yield chunk
 
-            if step == 1:
-                lang_match = re.search(r"LANGUAGE:\s*(\w+)", raw_content, re.IGNORECASE)
-                if lang_match: self.detected_lang = lang_match.group(1).strip()
-
-            parsed = self._parse_response(raw_content)
-
-            if parsed["type"] == "tool":
-                tool_name = parsed["data"].get("tool")
-                tool_args = parsed["data"].get("arguments", {})
-
-                self.messages.append({"role": "assistant", "content": raw_content})
-                observation = await self._execute_tool(tool_name, tool_args)
-                print(f"**Observation**: \n {observation}\n")
-            
-                if tool_name == "search_system_context":
-                    rag_content = (
-                        f"**OBSERVATION**: \n"
-                        f"{observation}\n\n"
-                        "### CRITICAL SYSTEM DIRECTIVE ###\n"
-                        "Do NOT call 'search_system_context' again. "
-                        "Read the tools provided in the observation above. "
-                        "Extract the required arguments from the user's petition, pick the correct tool, and CALL IT now."
-                    )
-                    self.messages.append({"role": "user", "content": rag_content})
-                else:
-                    self.messages.append({"role": "user", "content": f"**OBSERVATION**: {observation}"})
-                continue
-
-            elif parsed["type"] == "final":
-                final_text = parsed["data"]
-                if not self.requires_info:
-                    final_text += f"\nHISTORY CHAT TO COMPLETE THE ANSWE\n {self.history_text}"
-                    print(f"\n Texto final: {final_text}\n")
-                final_text_origin_language = await self._translate_to_pepe(final_answer=final_text)
-                print(f"\n=== FINAL TEXT TO THE USER===\n{final_text_origin_language}")
-                await finalize_storage(self.telegram_id, self.original_message, final_text_origin_language)
-                yield final_text_origin_language
-                
-                return
-
-            else: 
-                fallback_text = parsed["data"]
-                translated_fallback = await self._translate_to_pepe(fallback_text)
-                print(f"\n=== FALLBACK TRANSLATED ===\n{translated_fallback}")
-                await finalize_storage(self.telegram_id, self.original_message, translated_fallback)
-                yield translated_fallback
-
-                return
-
-    async def _translate_to_pepe(self, final_answer: str) -> str:
-        print(f"Mensaje original:{self.original_message}, Informacion dada:{final_answer}")
-        
-        user_prompt = (
-            f"The user said: {self.original_message}\n\n"
-            f"TECHNICAL_REPORT to present:\n{final_answer}\n\n"
-            "INSTRUCTION: If the report contains data, lists, or help menus, EXPLAIN ALL OF THEM without omitting anything. "
-            "If the report says 'Pure conversational intent', just reply naturally to the user based on the CHAT_HISTORY.\n"
-            f"FINAL ANSWER LANGUAGE:{self.detected_lang} \n"
-            "ONLY RETURN THE **FINAL ANSWER**:"
+    async def _handle_data_fetch(self, clean_intent: str, log_summary: str) -> AsyncGenerator[str, None]:
+        """Maneja la extracción de nuevos datos (Planning + ReAct)."""
+        agent = DataFetchReActAgent(
+            log_summary=log_summary,
+            clean_intent=clean_intent, 
+            telegram_id=self.telegram_id, 
+            language=self.detected_lang
         )
 
-        translation_prompt = [
-            {"role": "system", "content": get_pepe_analyst_context(
-                language=self.detected_lang,
-                original_msg=self.original_message,
-                gathered_data_from_phase_1=final_answer,
-                history=self.history_text                
-            )},
-            {"role": "user", "content": user_prompt}
-        ]
-        
-        response = await call_openai_standard(translation_prompt, temperature=0.9,model=self.pepemodel)
-        final_response = self._parse_response(response)
-        
-        if final_response["type"] == "final":
-            return final_response["data"]
-        return response.replace("**FINAL ANSWER**:", "").strip().replace("FINAL RESPONSE:", "").strip()
-    
+        async for chunk in agent.run():
+            yield chunk
+
+
 async def query_ai(message: str, telegram_id: int) -> AsyncGenerator[str, None]:
-    agent = ReActAgent(telegram_id, message)
+    """
+    Función de entrada principal llamada por el bot de Telegram.
+    Instancia el orquestador y comienza el flujo de respuesta.
+    """
+    orchestrator = PepeOrchestrator(telegram_id, message)
     
-    yield "🛡️ *Analizando intención...*"
-    
-    intent_data = await agent.analyze_intent()
-    print(f"\n=== INTENT DATA ===\n{json.dumps(intent_data, indent=2)}")
-    
-    if not intent_data.get("is_valid", True):
-        rejection_msg = await agent.generate_pepe_rejection(intent_data.get("reject_reason", "Off-topic"))
-        yield rejection_msg
-        return
-
-    #Inicializar Agente ReAct
-    optimized_query = intent_data.get("optimized_query", message)
-    plan_str = "\n".join(intent_data.get("step_by_step_plan", []))
-    domain = intent_data.get("domain", "SYSTEM") 
-    time_args = intent_data.get("time_arguments") # <--- Obtenemos el diccionario JSON
-    
-    agent.requires_info = intent_data.get("requires_info", True)
-    agent.requires_analysis = intent_data.get("requires_analysis", False)
-
-    # Inyeccion de tiempo
-    if time_args:
-        time_str = f"\n**READY-TO-USE TIME ARGUMENTS**: {json.dumps(time_args)}\n(Merge these exact keys into your TOOL_CALL arguments if the tool requires time)."
-    else:
-        time_str = ""
-    
-    agent.original_message = (
-        f"GOAL: {optimized_query}\n"
-        f"PLAN:\n{plan_str}\n"
-        f"Pre-calculated Domain: [{domain}]"
-        f"{time_str}"
-    )
-
-    async for chunk in agent.run():
-        yield chunk
+    async for response in orchestrator.route_request():
+        yield response
