@@ -146,8 +146,9 @@
 
 ### 12 TOOL: search_products_in_inventory (filtered)
 - **TOOL_NAME:** `search_products_in_inventory`
+- **WARNING**: IF YOU ONLY NEED PRODUCTS NAMES, USE THE TOOL get_all_product_names WHITHOUT arguments
 - **DESCRIPTION:** Primary tool for retrieving individual item data. Use this whenever you need to find the PRICE, STOCK LEVEL, or TECHNICAL DETAILS of any product in the catalog using its name, SKU, or database ID.
-- **KEYWORDS:** product lookup, price check,list products, check stock, item cost, find product, unit price, catalog search, SKU lookup, item availability, product details, inventory search,filtering products.
+- **KEYWORDS:** product lookup, price check,list products, check stock, item cost, find product, unit price, catalog search, SKU lookup, item,product identifier,availability, product details, inventory search,filtering products.
 - **ARGUMENTS:** `{ "id": int, "name": string, "sku": string, "supplier_id": int, "low_stock": bool, "price": float, "final_price": float, "tax_rate": float, "tax_rate_display": string }
 - **EXAMPLE_QUESTIONS:** 
   - "What is the price of [Product Name]?" -> `{"name": "[Product Name]"}`

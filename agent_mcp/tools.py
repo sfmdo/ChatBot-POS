@@ -195,7 +195,7 @@ def setup_tools(mcp):
             ]
 
         if is_frequent is not None: 
-            results = [c for c in results if (c["frequent_customer"] == "Yes") == is_frequent]
+            results = [c for c in results if c.get("frequent_customer", "No") == "Yes"]
     
         if has_debt is not None:
             results = [c for c in results if (clean_money(c["credit_used"]) > 0) == has_debt]

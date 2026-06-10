@@ -6,11 +6,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 class PromptRoutes(Enum):
     GATEKEEPER = "app/ai/prompts/gatekeeper.md"
-    DATA_RETRIEVAL = "app/aiprompts/data_retrieval.md"
-    PEPE_ANALYST = "app/aiprompts/pepe_analyst.md"
-    PEPE_REJECTION = "app/aiprompts/pepe_rejection.md"
-    DATA_PLANING = "app/aiprompts/data_planing.md"
-    CONTEXT_ANALYST = "app/aiprompts/pepe_context_analyst.md"
+    DATA_RETRIEVAL = "app/ai/prompts/data_retrieval.md"
+    PEPE_ANALYST = "app/ai/prompts/pepe_data_analyst.md"
+    PEPE_REJECTION = "app/ai/prompts/pepe_rejection.md"
+    DATA_PLANING = "app/ai/prompts/data_planing.md"
+    CONTEXT_ANALYST = "app/ai/prompts/pepe_context_analyst.md"
     GENERAL_CHAT = "app/ai/prompts/pepe_chat.md"
     PEPE_CONTEXT_ANALYST = "app/ai/prompts/pepe_context_analyst.md"
 
@@ -35,13 +35,14 @@ def get_data_retrieval_context():
     return f"{system_prompt} \n## SESSION DATA - Timestamp: {now}"
 
 def get_pepe_analyst_context(language: str, user_request: str, technical_info: str):
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     system_prompt = get_prompt(PromptRoutes.PEPE_ANALYST)
     return f"""
 {system_prompt}\n
 ### INPUT DATA
 - **USER REQUEST**: {user_request}
 - **TECHNICAL REPORT TO ANALYZE**: {technical_info}
-
+- **TODAYS DATE**: {now}
 ### FINAL RESPONSE PROTOCOL
 - Output ONLY the final response exactly as the user will read it on Telegram.
 - WHEN YOU FINILIZE YOUR ANALYSIS, USE THE **FINAL RESPONSE**: AND THEN GIVE THE FINAL ANSWER TO THE USER
@@ -66,7 +67,8 @@ Analyze the request and output the strict JSON below:
 
 def get_data_planing_context():
     system_context = get_prompt(PromptRoutes.DATA_PLANING)
-    return system_context
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    return system_context + f"\n**CURRENT DATE**:{now}"
 
 def get_pepe_rejection_context():
     system_context = get_prompt(PromptRoutes.PEPE_REJECTION)

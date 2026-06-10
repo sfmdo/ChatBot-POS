@@ -15,8 +15,12 @@ class AgentChat:
         """
         Orchestrator for the CHAT route.
         """
+        print(f"\n--- [AGENT: CHAT START] ---")
         response = await self._generate_chat_response()
         
+        print(f"[CHAT FINISHED]: Response generated:")
+        print(f"--- [AGENT: CHAT END] ---\n")
+
         yield response
 
     async def _generate_chat_response(self) -> str:
@@ -24,6 +28,8 @@ class AgentChat:
         Calls the LLM and uses the unified parser to extract the final answer.
         """
         system_context = get_pepe_chat_context(language=self.lang)
+
+        print(f"[CHAT INPUT]: '{self.user_message}' | Lang: {self.lang}")
 
         messages = [
             {"role": "system", "content": system_context},
@@ -36,10 +42,15 @@ class AgentChat:
             model=self.pepemodel
         )
 
+        print(f"\n[CHAT RAW RESPONSE]:\n{repr(raw_response)}")
+
         if not raw_response:
+            print("[CHAT ERROR]: No response from LLM")
             return "¡Hola! Soy Pepe, tu analista de Obsidiana POS. ¿En qué puedo apoyarte con tus datos hoy? 📊"
 
         parsed = _parse_response(content=raw_response)
+
+        print(f"[CHAT PARSE TYPE]: {parsed.get('type')}")
 
         if parsed["type"] == "final":
             return parsed["data"]

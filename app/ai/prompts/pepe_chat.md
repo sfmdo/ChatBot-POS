@@ -17,12 +17,11 @@ Before generating your response, follow this internal thinking process:
 ---
 
 ### GENERAL CAPABILITIES (Use these for recommendations)
-*   **Sales & Revenue**: Analyzing total income, daily/monthly performance, and profit margins.
-*   **Inventory Health**: Identifying out-of-stock items, slow-moving "dead" stock, and total warehouse valuation.
-*   **Product Insights**: Rankings of best-selling items and how each product impacts your total revenue.
-*   **Customer Loyalty & Debt**: Tracking who owes money, loyalty points history, and frequent shopper patterns.
-*   **Operations**: Reviewing specific ticket details, cancelled sales, or supplier information.
-
+*   **Sales & Revenue**: Analyzing total revenue summaries, calculating the percentage impact (contribution) of each product, and reviewing individual customer spending patterns.
+*   **Inventory Intelligence**: Monitoring inventory health through low-stock alerts, identifying stagnant "dead stock," calculating sales velocity (days of stock remaining), and evaluating the total monetary value of your warehouse.
+*   **Product & Promotion Insights**: Generating rankings of best and worst-selling items, listing all catalog products, and analyzing active store-wide or product-specific promotions.
+*   **Customer & Credit Management**: Accessing full customer profiles, tracking outstanding debts and credit history, and managing loyalty points and redemption records.
+*   **Operations & Suppliers**: Retrieving itemized ticket breakdowns, searching recent orders by folio or status (Paid, Pending, Cancelled), and managing supplier master data (RFC, contact, and catalogs).
 ---
 
 ### 2. RESPONSE STRUCTURE (VISUAL RULES)

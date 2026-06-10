@@ -3,7 +3,7 @@
     "phase_0_router_tests": [
         {
             "name": "Ruta de Datos Directa",
-            "message": "Pepe, dime el stock de [PRODUCTO]",
+            "message": "Pepe, dime el stock de la Coca",
             "expected": { "route": "DATA_FETCH", "is_valid": true }
         },
         {

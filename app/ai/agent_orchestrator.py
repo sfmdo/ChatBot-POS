@@ -1,7 +1,7 @@
 import json
 import re
-import asyncio
-from typing import AsyncGenerator, Dict, Any
+import logging
+from typing import AsyncGenerator
 from .llm_service import call_openai_standard
 from app.models.database import get_user_context
 from app.ai.context_service import get_gatekeeper_context
@@ -10,6 +10,8 @@ from app.ai.agent_routes.ai_data_fetch import DataFetchReActAgent
 from app.ai.agent_routes.ai_rejection import AgentRejecter
 from app.ai.agent_routes.ai_chat import AgentChat
 from app.ai.agent_routes.ai_drill_down import AgentDrillDown
+
+logger = logging.getLogger("pepe.orchestrator")
 
 class PepeOrchestrator:
     def __init__(self, telegram_id: int, message: str):
@@ -32,6 +34,7 @@ class PepeOrchestrator:
             role = "Pepe" if msg.get("role") == "assistant" else "User"
             content = msg.get("content", "").replace("\n", " ")
             history_lines.append(f"[{role}]: {content}")
+        print(f"[HISTORY CONTEXT]: {len(history_lines)} logs recuperados.")
         return "\n".join(history_lines)
 
     async def route_request(self) -> AsyncGenerator[str, None]:
@@ -42,14 +45,25 @@ class PepeOrchestrator:
         yield "🛡️ *Analizando petición...*"
     
         history = await self._get_clean_history()
-    
+
+        print(f"\n{'='*30} [PHASE 0: MASTER ROUTER] {'='*30}")
+        print(f"INPUT USER: {self.raw_message}")
+
         router_prompt = get_gatekeeper_context(history=history, user_petition=self.raw_message)
         response = await call_openai_standard([{"role": "user", "content": router_prompt}], model=self.pepemodel)
-    
+
+        print(f"\n[ROUTER RAW RESPONSE]:\n{repr(response)}") 
+        print(f"{'-'*70}")
+
+        if not response:
+            logger.error("El Master Router devolvió una respuesta vacía.")
+            yield "No pude determinar la intención. ¿Podrías reformular tu pregunta?"
+            return
         # 3. Extracción de lógica del JSON
         json_match = re.search(r"\{.*\}", response, re.DOTALL) # type: ignore
         if not json_match:
-            yield "❌ No pude determinar la intención. ¿Podrías reformular tu pregunta?"
+            logger.warning(f"No se encontró JSON en la respuesta: {response}")
+            yield "No pude determinar la intención. ¿Podrías reformular tu pregunta?"
             return
 
         try:
@@ -63,33 +77,43 @@ class PepeOrchestrator:
             reject_reason = route_data.get("reject_reason", "Topic unrelated to POS/Business.")
             self.detected_lang = route_data.get("language", "Spanish")
         
-            print(f"DEBUG: ROUTE -> {route} | LANG -> {self.detected_lang}")
+            print(f"[ROUTER PARSED]: Route={route} | Lang={self.detected_lang} | Valid={is_valid}")
+            print(f"[CLEAN INTENT]: {clean_intent}")
 
             if route == "REJECTION" or not is_valid:
+                print(f"Dispatching to --> AGENT_REJECTER")
                 async for chunk in self._handle_rejection(reason=reject_reason):
                     yield chunk
 
             elif route == "CHAT":
+                print(f" Dispatching to --> AGENT_CHAT")
                 async for chunk in self._handle_chat():
                     yield chunk
 
             elif route == "DRILL_DOWN":
+                print(f"Dispatching to --> AGENT_DRILL_DOWN")
                 async for chunk in self._handle_drill_down(
-                    intent_description=intent_description, 
+                    intent_description=intent_description,
+                    clean_intent=clean_intent, 
                     history=history
                 ):
                     yield chunk
 
             elif route == "DATA_FETCH":
+                print(f"Dispatching to --> DATA_FETCH_AGENT")
                 async for chunk in self._handle_data_fetch(
                     clean_intent=clean_intent, 
                     log_summary=log_summary
                 ):
                     yield chunk
 
+            print(f"\n{'='*30} [ROUTING FINISHED] {'='*30}\n")
+        except json.JSONDecodeError as je:
+            print(f"[JSON ERROR]: Error al decodificar la intención. Detalle: {str(je)}")
+            yield "Hubo un error de formato en la comunicación interna."
         except Exception as e:
             print(f"Error Crítico en Orchestrator: {str(e)}")
-            yield "❌ Lo siento, tuve un problema interno al organizar tu respuesta técnica."
+            yield "Lo siento, tuve un problema interno al organizar tu respuesta técnica."
 
     async def _handle_rejection(self, reason: str) -> AsyncGenerator[str, None]:
         """Maneja peticiones fuera de contexto."""
@@ -112,12 +136,13 @@ class PepeOrchestrator:
         async for chunk in agent.run():
             yield chunk
 
-    async def _handle_drill_down(self, intent_description: str, history: str) -> AsyncGenerator[str, None]:
+    async def _handle_drill_down(self, intent_description: str,clean_intent: str, history: str) -> AsyncGenerator[str, None]:
         """Maneja análisis profundos basados únicamente en el historial."""
         yield "🧠 *Analizando datos previos...*"
         agent = AgentDrillDown(
             telegram_id=self.telegram_id,
             intent_description=intent_description,
+            clean_intent=clean_intent,
             history=history,
             language=self.detected_lang
         )
@@ -127,7 +152,6 @@ class PepeOrchestrator:
     async def _handle_data_fetch(self, clean_intent: str, log_summary: str) -> AsyncGenerator[str, None]:
         """Maneja la extracción de nuevos datos (Planning + ReAct)."""
         agent = DataFetchReActAgent(
-            log_summary=log_summary,
             clean_intent=clean_intent, 
             telegram_id=self.telegram_id, 
             language=self.detected_lang

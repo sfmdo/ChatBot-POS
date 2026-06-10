@@ -1,0 +1,169 @@
+
+>>> PHASE 0: MASTER ROUTER LOGIC
+
+Test: Ruta de Datos Directa | Input: Pepe, dime el stock de [PRODUCTO]
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: DATA_FETCH | Clean Intent: get stock for [PRODUCTO]
+RESULT: ✅ PASS
+
+Test: Ruta de Drill Down (Seguimiento) | Input: ¿Y por qué vendí tan poquito de eso?
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: DRILL_DOWN | Clean Intent: analyze low sales causes for [PRODUCTO]
+RESULT: ✅ PASS
+
+Test: Ruta de Rechazo (Off-topic) | Input: ¿Cómo se hace una pizza?
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: REJECTION | Clean Intent: None
+RESULT: ✅ PASS
+
+Test: Ruta de Chat (Cortesía) | Input: Muchas gracias Pepe, eres un crack.
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: CHAT | Clean Intent: user gratitude
+RESULT: ✅ PASS
+
+>>> PHASE 0.5: TECHNICAL ARCHITECT (PLANNING)
+
+Test: Planificación de Ventas con Tiempo | Clean Intent: get sales summary for yesterday
+FATAL ERROR: [Errno 2] No such file or directory: '/home/sfmdo/Projects/ChatBot-POS/app/aiprompts/data_planing.md'
+Traceback (most recent call last):
+  File "/home/sfmdo/Projects/ChatBot-POS/test/run_conversation_test.py", line 116, in main
+    await test_phase_0_5_architect(test_log, data["phase_0_5_architect_tests"])
+  File "/home/sfmdo/Projects/ChatBot-POS/test/run_conversation_test.py", line 79, in test_phase_0_5_architect
+    success = await agent.generate_plan()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/app/ai/agent_routes/ai_data_fetch.py", line 31, in generate_plan
+    planning_instructions = get_data_planing_context()
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/app/ai/context_service.py", line 68, in get_data_planing_context
+    system_context = get_prompt(PromptRoutes.DATA_PLANING)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sfmdo/Projects/ChatBot-POS/app/ai/context_service.py", line 26, in get_prompt
+    with open(absolute_path, 'r', encoding='utf-8') as mdprompt:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/sfmdo/Projects/ChatBot-POS/app/aiprompts/data_planing.md'
+
+============================================================
+TESTING COMPLETE.
+
+>>> PHASE 0: MASTER ROUTER LOGIC
+
+Test: Ruta de Datos Directa | Input: Pepe, dime el stock de [PRODUCTO]
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: DATA_FETCH | Clean Intent: get stock for [PRODUCTO]
+RESULT: ✅ PASS
+
+Test: Ruta de Drill Down (Seguimiento) | Input: ¿Y por qué vendí tan poquito de eso?
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: DRILL_DOWN | Clean Intent: analyze low sales causes for [PRODUCTO]
+RESULT: ✅ PASS
+
+Test: Ruta de Rechazo (Off-topic) | Input: ¿Cómo se hace una pizza?
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: REJECTION | Clean Intent: None
+RESULT: ✅ PASS
+
+Test: Ruta de Chat (Cortesía) | Input: Muchas gracias Pepe, eres un crack.
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: CHAT | Clean Intent: user gratitude
+RESULT: ✅ PASS
+
+>>> PHASE 0.5: TECHNICAL ARCHITECT (PLANNING)
+
+Test: Planificación de Ventas con Tiempo | Clean Intent: get sales summary for yesterday
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+❌ FAIL: Planning phase failed
+
+Test: Planificación de ID + Detalles | Clean Intent: get RFC and items for [PROVEEDOR]
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+❌ FAIL: Planning phase failed
+FATAL ERROR: 'phase_4_full_sequence'
+Traceback (most recent call last):
+  File "/home/sfmdo/Projects/ChatBot-POS/test/run_conversation_test.py", line 117, in main
+    await test_phase_4_full_sequence(test_log, data["phase_4_full_sequence"], data["telegram_id"])
+                                               ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'phase_4_full_sequence'
+
+============================================================
+TESTING COMPLETE.
+
+>>> PHASE 0: MASTER ROUTER LOGIC
+
+Test: Ruta de Datos Directa | Input: Pepe, dime el stock de [PRODUCTO]
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: DATA_FETCH | Clean Intent: get stock for [PRODUCTO]
+RESULT: ✅ PASS
+
+Test: Ruta de Drill Down (Seguimiento) | Input: ¿Y por qué vendí tan poquito de eso?
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: DRILL_DOWN | Clean Intent: analyze low sales causes for [PRODUCTO]
+RESULT: ✅ PASS
+
+Test: Ruta de Rechazo (Off-topic) | Input: ¿Cómo se hace una pizza?
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: REJECTION | Clean Intent: None
+RESULT: ✅ PASS
+
+Test: Ruta de Chat (Cortesía) | Input: Muchas gracias Pepe, eres un crack.
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: CHAT | Clean Intent: user gratitude
+RESULT: ✅ PASS
+
+>>> PHASE 0.5: TECHNICAL ARCHITECT (PLANNING)
+
+Test: Planificación de Ventas con Tiempo | Clean Intent: get sales summary for yesterday
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+❌ FAIL: Planning phase failed
+
+Test: Planificación de ID + Detalles | Clean Intent: get RFC and items for [PROVEEDOR]
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+❌ FAIL: Planning phase failed
+FATAL ERROR: 'phase_4_full_sequence'
+Traceback (most recent call last):
+  File "/home/sfmdo/Projects/ChatBot-POS/test/run_conversation_test.py", line 117, in main
+    await test_phase_4_full_sequence(test_log, data["phase_4_full_sequence"], data["telegram_id"])
+                                               ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'phase_4_full_sequence'
+
+============================================================
+TESTING COMPLETE.
+
+>>> PHASE 0: MASTER ROUTER LOGIC
+
+Test: Ruta de Datos Directa | Input: Pepe, dime el stock de [PRODUCTO]
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: DATA_FETCH | Clean Intent: get stock for [PRODUCTO]
+RESULT: ✅ PASS
+
+Test: Ruta de Drill Down (Seguimiento) | Input: ¿Y por qué vendí tan poquito de eso?
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: DRILL_DOWN | Clean Intent: analyze low sales causes for [PRODUCTO]
+RESULT: ✅ PASS
+
+Test: Ruta de Rechazo (Off-topic) | Input: ¿Cómo se hace una pizza?
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: REJECTION | Clean Intent: None
+RESULT: ✅ PASS
+
+Test: Ruta de Chat (Cortesía) | Input: Muchas gracias Pepe, eres un crack.
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+Detected Route: CHAT | Clean Intent: user gratitude
+RESULT: ✅ PASS
+
+>>> PHASE 0.5: TECHNICAL ARCHITECT (PLANNING)
+
+Test: Planificación de Ventas con Tiempo | Clean Intent: get sales summary for yesterday
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+❌ FAIL: Planning phase failed
+
+Test: Planificación de ID + Detalles | Clean Intent: get RFC and items for [PROVEEDOR]
+HTTP Request: POST http://100.82.193.50:11434/v1/chat/completions "HTTP/1.1 200 OK"
+❌ FAIL: Planning phase failed
+FATAL ERROR: 'phase_4_full_sequence'
+Traceback (most recent call last):
+  File "/home/sfmdo/Projects/ChatBot-POS/test/run_conversation_test.py", line 117, in main
+    await test_phase_4_full_sequence(test_log, data["phase_4_full_sequence"], data["telegram_id"])
+                                               ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'phase_4_full_sequence'
+
+============================================================
+TESTING COMPLETE.

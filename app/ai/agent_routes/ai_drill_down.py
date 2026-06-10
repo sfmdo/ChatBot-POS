@@ -7,8 +7,9 @@ from app.ai.ai_tools import _parse_response
 from app.ai.storage_service import finalize_storage
 
 class AgentDrillDown:
-    def __init__(self, telegram_id: int, intent_description: str, history: str, language: str = "Spanish"):
+    def __init__(self, telegram_id: int, intent_description: str, history: str, clean_intent: str, language: str = "Spanish"):
         self.telegram_id = telegram_id
+        self.clean_intent = clean_intent
         self.intent_description = intent_description 
         self.history = history 
         self.lang = language
@@ -23,7 +24,7 @@ class AgentDrillDown:
 
         final_analysis = await self._generate_analysis()
 
-        await finalize_storage(self.telegram_id, self.intent_description, final_analysis)
+        await finalize_storage(self.telegram_id, self.clean_intent, final_analysis)
 
         yield final_analysis
 
@@ -31,7 +32,7 @@ class AgentDrillDown:
         """
         Llama al LLM para procesar la lógica de análisis profundo sobre el log.
         """
-        system_context = get_pepe_drill_down_context(
+        system_context = get_pepe_drill_down_context(   
             history=self.history,
             language=self.lang
         )

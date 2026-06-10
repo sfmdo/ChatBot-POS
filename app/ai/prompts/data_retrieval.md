@@ -88,6 +88,11 @@ Identify the user domain BEFORE calling any tool:
 2. **RESOLVE NAMES FIRST**: You can never search for products belonging to a person or company without getting their integer ID first.
 3. **RAG CONSUMPTION**: When `search_system_context` returns a tool, your NEXT THOUGHT must be executing it.
 
+### ⚡ SHORT-CIRCUIT RULE:
+- **DATA SUFFICIENCY**: If a tool call (like a search) returns an observation that already contains the final answer (e.g., you already see the price and stock you were looking for), you MUST output **FINAL ANSWER** immediately.
+- **DO NOT** follow the `EXECUTION PLAN` steps if they have become redundant.
+- **DO NOT** invent "detail" tools if the search results already show the attributes needed.
+
 ### RECOVERY LOGIC
 - If you don't know the exact tool name, your FIRST action must be:
   `TOOL_CALL: {"tool": "search_system_context", "arguments": {"query": "**query**"}}`
