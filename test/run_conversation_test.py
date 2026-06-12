@@ -4,12 +4,10 @@ import re
 import logging
 from pathlib import Path
 
-# Importaciones de tu arquitectura real
 from app.ai.agent_orchestrator import PepeOrchestrator
 from app.ai.agent_routes.ai_data_fetch import DataFetchReActAgent
 from agent_mcp.client import mcp_manager
 
-# Configuración de Logging para ver los prints de las clases
 BASE_DIR = Path(__file__).resolve().parent
 JSON_DATA_PATH = BASE_DIR / "integration_test_data.json"
 

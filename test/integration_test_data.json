@@ -4,7 +4,7 @@
         {
             "name": "Ruta de Datos Directa",
             "message": "Pepe, dime el stock de la Coca",
-            "expected": { "route": "DATA_FETCH", "is_valid": true }
+            "expected": { "route": "DATA_FETCH", "domain": "PRODUCTS" }
         },
         {
             "name": "Ruta de Drill Down (Seguimiento)",
@@ -13,7 +13,17 @@
             "expected": { "route": "DRILL_DOWN", "relevance": "Follow-up" }
         },
         {
-            "name": "Ruta de Rechazo (Off-topic)",
+            "name": "Revisión de Promociones",
+            "message": "¿Qué ofertas tienes activas hoy?",
+            "expected": { "route": "DATA_FETCH", "domain": "PRODUCTS" }
+        },
+        {
+            "name": "Valoración de Activos",
+            "message": "Pepe, dime cuánto dinero tengo parado en la bodega.",
+            "expected": { "route": "DATA_FETCH", "domain": "ANALYTICS" }
+        },
+        {
+            "name": "Rechazo por Fuera de Tema",
             "message": "¿Cómo se hace una pizza?",
             "expected": { "route": "REJECTION", "is_valid": false }
         },
@@ -26,25 +36,41 @@
     "phase_0_5_architect_tests": [
         {
             "name": "Planificación de Ventas con Tiempo",
-            "clean_intent": "get sales summary for yesterday",
-            "expected": { 
-                "domain": "ANALYTICS", 
-                "time_arguments": { "period": "yesterday" } 
-            }
+            "clean_intent": "Get total sales summary for yesterday.",
+            "expected": { "domain": "ANALYTICS", "time_arguments": { "period": "yesterday" } }
         },
         {
-            "name": "Planificación de ID + Detalles",
-            "clean_intent": "get RFC and items for [PROVEEDOR]",
-            "expected": { 
-                "domain": "SUPPLIERS", 
-                "steps_min": 2 
-            }
+            "name": "Planificación de ID + Detalles de Proveedor",
+            "clean_intent": "Get RFC and products for supplier 'Pepsico'.",
+            "expected": { "domain": "SUPPLIERS", "steps_min": 2 }
+        },
+        {
+            "name": "Cálculo de Velocidad de Ventas",
+            "clean_intent": "Calculate sales velocity for SKU 'KO-REG-600'.",
+            "expected": { "domain": "ANALYTICS", "steps_min": 1 }
+        },
+        {
+            "name": "Búsqueda de Deudores Críticos",
+            "clean_intent": "Search for all customers with outstanding debt.",
+            "expected": { "domain": "CUSTOMERS" }
         }
     ],
     "phase_4_full_flow_sequence": [
-        { "turn": 1, "user_message": "Hola Pepe", "expected_route": "CHAT" },
-        { "turn": 2, "user_message": "¿Cuánto vendí ayer?", "expected_route": "DATA_FETCH" },
-        { "turn": 3, "user_message": "¿Y de eso quién fue el mejor cliente?", "expected_route": "DRILL_DOWN" },
-        { "turn": 4, "user_message": "¿Cómo arreglo mi coche?", "expected_route": "REJECTION" }
+        { "turn": 1, "user_message": "Hola Pepe, ¿cómo vas?", "expected_route": "CHAT" },
+        { "turn": 2, "user_message": "¿Qué puedes hacer por mi negocio?", "expected_route": "DATA_FETCH", "domain": "SYSTEM" },
+        { "turn": 3, "user_message": "Dime qué productos se me están acabando.", "expected_route": "DATA_FETCH", "domain": "ANALYTICS", "description": "Llama a get_low_stock" },
+        { "turn": 4, "user_message": "De esa lista de bajos, ¿cuál es el precio de la CocaCola 600ml?", "expected_route": "DATA_FETCH", "domain": "PRODUCTS", "description": "Debe inyectar el ID de la coca si apareció en el turno anterior" },
+        { "turn": 5, "user_message": "Oye, ¿y tiene algún descuento?", "expected_route": "DATA_FETCH", "domain": "PRODUCTS", "description": "Llama a get_promotions_by_product" },
+        { "turn": 6, "user_message": "Cambiando de tema, sácame las ventas de la semana pasada.", "expected_route": "DATA_FETCH", "domain": "ANALYTICS", "time": "last_week" },
+        { "turn": 7, "user_message": "¿Cuál fue el producto que más dinero me dejó de esas ventas?", "expected_route": "DATA_FETCH", "domain": "ANALYTICS", "description": "Debe calcular Product Contribution o Ranking" },
+        { "turn": 8, "user_message": "¿Y por qué se vendió tanto ese?", "expected_route": "DRILL_DOWN", "description": "Pepe debe analizar el reporte del turno 7 cognitivamente" },
+        { "turn": 9, "user_message": "Búscame al proveedor 'Marinela' y pásame su RFC.", "expected_route": "DATA_FETCH", "domain": "SUPPLIERS" },
+        { "turn": 10, "user_message": "Dime qué productos nos surten ellos.", "expected_route": "DATA_FETCH", "domain": "PRODUCTS", "description": "Herencia de Supplier ID" },
+        { "turn": 11, "user_message": "¿Quién es el cliente que más me debe dinero ahorita?", "expected_route": "DATA_FETCH", "domain": "CUSTOMERS" },
+        { "turn": 12, "user_message": "Sácame las últimas 5 ventas que estén en PENDING.", "expected_route": "DATA_FETCH", "domain": "ORDERS" },
+        { "turn": 13, "user_message": "Dame el detalle de la primera de esa lista.", "expected_route": "DATA_FETCH", "domain": "ORDERS", "description": "Debe capturar el Folio o Order ID del turno anterior" },
+        { "turn": 14, "user_message": "Para terminar, dime cuánto vale toda mi mercancía en bodega.", "expected_route": "DATA_FETCH", "domain": "ANALYTICS", "description": "Inventory Valuation" },
+        { "turn": 15, "user_message": "Por cierto Pepe, ¿tú sabes cómo se arregla un coche?", "expected_route": "REJECTION", "description": "Test de seguridad de dominio" },
+        { "turn": 16, "user_message": "Gracias por todo Pepe, nos vemos mañana.", "expected_route": "CHAT", "description": "Cierre social" }
     ]
 }

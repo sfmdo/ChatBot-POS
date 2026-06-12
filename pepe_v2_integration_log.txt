@@ -1,0 +1,18 @@
+PEPE 2.0 - INTEGRATION TESTS
+DATE: 2026-06-08 09:15:50.219593
+============================================================
+
+>>> PHASE 0: MASTER ROUTER LOGIC
+
+Test: Ruta de Datos Directa | Input: Pepe, dime el stock de [PRODUCTO]
+Detected Route: DATA_FETCH | Clean Intent: get stock for [PRODUCTO]
+RESULT: ✅ PASS
+
+Test: Ruta de Drill Down (Seguimiento) | Input: ¿Y por qué vendí tan poquito de eso?
+Detected Route: DRILL_DOWN | Clean Intent: analyze low sales causes for [PRODUCTO]
+RESULT: ✅ PASS
+
+Test: Ruta de Rechazo (Off-topic) | Input: ¿Cómo se hace una pizza?
+
+============================================================
+TESTING COMPLETE.

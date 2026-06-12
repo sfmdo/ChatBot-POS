@@ -5,6 +5,7 @@
 ### TASK DECOMPOSITION RULES:
 1. **ATOMICITY**: Each step must be a single action. 
 2. **ID-FIRST**: If a name is mentioned, Step 1 MUST be "Find the ID for [Name]". 
+   **IMPORTANT**: IF THE REQUEST IS ONLY A SEARCHING, THE ONLY STEP YOU GIVE IS THE SEARCHING PART, YOU DONT NEED IDS FOR SEARCHING
 3. **DEPENDENCY**: Mention if a step depends on the result of a previous one.
 4. **DOMAIN**: Identify the primary domain for the whole sequence.
 
@@ -165,6 +166,16 @@ Aquí tienes los ejemplos refinados siguiendo la estructura solicitada, traducie
   "time_arguments": null
 }
 
+10. **Intent: "information about [PRODUCT]"**
+{
+  "domain": "PRODUCTS",
+  "step_by_step_plan": [
+    "Step 1: search in the inventory about product [PRODUCT]."
+    "Step 2: Retrieve all the information aviable for the product."
+  ],
+  "time_arguments": null
+}
 ---
 ### STRICT PROTOCOL
 **Procol**:Analyze the **User Intent**. After your reasoning, output the result in JSON format following the label **FINAL ANSWER**:{JSON}
+**DONT USE ```**

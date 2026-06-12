@@ -138,6 +138,8 @@ class DataFetchReActAgent:
             obs = "\n".join([c.text for c in result.content if isinstance(c, TextContent)])
             print(f"[OBSERVATION]: {len(obs)}")
             print(f"[DATA PREVIEW]: {obs[:200]}...")
+            if obs== "[]" or obs == "" or "No records" in obs:
+                return f"OBSERVATION: Empty Result. No data was found for {args}. CRITICAL: This means the entity does not exist in the database. DO NOT retry this search. Provide your FINAL ANSWER informing the user."
             return obs[:30000]
         except Exception as e:
             print(f"[TOOL ERROR]: {str(e)}")
