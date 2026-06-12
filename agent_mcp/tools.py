@@ -1,5 +1,5 @@
 # app/bot/mcp_tools.py
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Mapping
 from app.utils.time_translator import TimeTranslator
 from app.services import analytics_api, orders_api, products_api, customers_api, chatbot_users_api, suppliers_api
 import logging
@@ -9,27 +9,54 @@ logger = logging.getLogger(__name__)
 
 def setup_tools(mcp):
     """Registra todas las herramientas del sistema POS en el servidor MCP."""
-
+    def resolve_time_args(period: Optional[str], unit: Optional[str], quantity: Optional[int]) -> Mapping[str, Optional[str]]:
+        """Helper para unificar la lógica de TimeTranslator en todas las herramientas."""
+        request = {}
+        if period: request["period"] = period
+        elif unit and quantity:
+            request["unit"] = unit
+            request["quantity"] = quantity
+        
+        if not request:
+            return {"start_date": None, "end_date": None}
+            
+        dates = TimeTranslator.process_request(request)
+        if "error" in dates:
+            logger.error(f"Time translation error: {dates['error']}")
+            return {"start_date": None, "end_date": None}
+        return dates
     # ! ANALYTICS 
 
     @mcp.tool()
-    async def get_sales_summary(start_date: Optional[str] = None, end_date: Optional[str] = None, period: Optional[str] = None) -> Any:
-        """Generates a financial and operational report (revenue, average ticket, payment methods) for a period."""
-        if period:
-            dates = TimeTranslator.process_request({"period": period})
-            if "error" not in dates:
-                start_date = dates.get("start_date")
-                end_date = dates.get("end_date")
+    async def get_sales_summary(
+        start_date: Optional[str] = None, 
+        end_date: Optional[str] = None, 
+        period: Optional[str] = None,
+        unit: Optional[str] = None,       
+        quantity: Optional[int] = None    
+    ) -> Any:
+        """Generates a financial and operational report. Use 'period' (today, yesterday, etc) OR 'unit' + 'quantity' (last 30 days)."""
+        if not start_date:
+            dates = resolve_time_args(period, unit, quantity)
+            start_date, end_date = dates.get("start_date"), dates.get("end_date")
+            
         return await analytics_api.get_sales_summary(start_date=start_date, end_date=end_date)
 
     @mcp.tool()
-    async def get_product_ranking(limit: int = 10, criterion: str = "most", start_date: Optional[str] = None, end_date: Optional[str] = None, period: Optional[str] = None) -> Any:
-        """Returns the ranking of most or least sold products. criterion must be 'most', 'least', or 'both'."""
-        if period:
-            dates = TimeTranslator.process_request({"period": period})
-            if "error" not in dates:
-                start_date = dates.get("start_date")
-                end_date = dates.get("end_date")
+    async def get_product_ranking(
+        limit: int = 10, 
+        criterion: str = "most", 
+        start_date: Optional[str] = None, 
+        end_date: Optional[str] = None, 
+        period: Optional[str] = None,
+        unit: Optional[str] = None,       
+        quantity: Optional[int] = None    
+    ) -> Any:
+        """Returns ranking of products. criterion: 'most', 'least'. Use 'period' or 'unit'+'quantity'."""
+        if not start_date:
+            dates = resolve_time_args(period, unit, quantity)
+            start_date, end_date = dates.get("start_date"), dates.get("end_date")
+            
         return await analytics_api.get_product_ranking(limit=limit, criterion=criterion, start_date=start_date, end_date=end_date)
 
     @mcp.tool()
@@ -38,8 +65,16 @@ def setup_tools(mcp):
         return await analytics_api.get_low_stock(threshold=threshold)
 
     @mcp.tool()
-    async def get_dead_inventory(reference_date: Optional[str] = None) -> Any:
-        """Identifies products that have had no sales since a given reference date."""
+    async def get_dead_inventory(
+        reference_date: Optional[str] = None,
+        unit: Optional[str] = None,       # <--- AHORA ACEPTA UNIT
+        quantity: Optional[int] = None    # <--- AHORA ACEPTA QUANTITY
+    ) -> Any:
+        """Finds stagnant products. If no reference_date, use 'unit' and 'quantity' (e.g., 'month', 6)."""
+        if not reference_date and (unit and quantity):
+            dates = resolve_time_args(None, unit, quantity)
+            reference_date = dates.get("start_date") # Usamos la fecha de inicio del lookback
+            
         return await analytics_api.get_dead_inventory(reference_date=reference_date)
 
     @mcp.tool()
@@ -53,24 +88,50 @@ def setup_tools(mcp):
         return await analytics_api.get_inventory_valuation(product_identifier=product_identifier)
 
     @mcp.tool()
-    async def get_product_contribution(product_identifier: str, start_date: Optional[str] = None, end_date: Optional[str] = None, period: Optional[str] = None) -> Any:
-        """Calculates the percentage of total sales generated by a specific product."""
-        if period:
-            dates = TimeTranslator.process_request({"period": period})
-            if "error" not in dates:
-                start_date = dates.get("start_date")
-                end_date = dates.get("end_date")
-        return await analytics_api.get_product_contribution(product_identifier=product_identifier, start_date=start_date, end_date=end_date)
-
+    async def get_product_contribution(
+        product_identifier: str, 
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        period: Optional[str] = None,
+        unit: Optional[str] = None,       # <--- Agregado a la firma
+        quantity: Optional[int] = None    # <--- Agregado a la firma
+    ) -> Any:
+        """Calculates the percentage of total sales generated by a specific product. Use 'period' or 'unit'+'quantity'."""
+        
+        # Si no nos dan fechas absolutas, resolvemos los argumentos de tiempo
+        if not start_date:
+            dates = resolve_time_args(period, unit, quantity)
+            start_date = dates.get("start_date")
+            end_date = dates.get("end_date")
+            
+        return await analytics_api.get_product_contribution(
+            product_identifier=product_identifier, 
+            start_date=start_date, 
+            end_date=end_date
+        )
+    
     @mcp.tool()
-    async def get_customer_sales(customer_id: int, start_date: Optional[str] = None, end_date: Optional[str] = None, period: Optional[str] = None) -> Any:
-        """Retrieves the purchase history, spending habits, and favorite products for a specific customer."""
-        if period:
-            dates = TimeTranslator.process_request({"period": period})
-            if "error" not in dates:
-                start_date = dates.get("start_date")
-                end_date = dates.get("end_date")
-        return await analytics_api.get_customer_sales(customer_id=customer_id, start_date=start_date, end_date=end_date)
+    async def get_customer_sales(
+        customer_id: int, 
+        start_date: Optional[str] = None, 
+        end_date: Optional[str] = None, 
+        period: Optional[str] = None,
+        unit: Optional[str] = None,       # <--- Agregado a la firma
+        quantity: Optional[int] = None    # <--- Agregado a la firma
+    ) -> Any:
+        """Retrieves the purchase history and spending habits for a specific customer. Use 'period' or 'unit'+'quantity'."""
+        
+        # Si no nos dan fechas absolutas, resolvemos los argumentos de tiempo
+        if not start_date:
+            dates = resolve_time_args(period, unit, quantity)
+            start_date = dates.get("start_date")
+            end_date = dates.get("end_date")
+            
+        return await analytics_api.get_customer_sales(
+            customer_id=customer_id, 
+            start_date=start_date, 
+            end_date=end_date
+        )
 
     # ! ORDERS MODULE 
 
